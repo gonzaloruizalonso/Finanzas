@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Finanzas Gonzalo</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    
+    <style>
+        body { background-color: #0f172a; color: white; font-family: sans-serif; }
+        .glass { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1); }
+    </style>
+</head>
+<body class="p-4 md:p-8 max-w-lg mx-auto">
+
+    <div x-data="app()" x-init="initData()">
+        
+        <div class="flex justify-between items-center mb-6">
+            <h1 class="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-orange-400 to-red-500">
+                Planificador
+            </h1>
+            <button @click="initData()" class="text-sm text-gray-400 hover:text-white">Recargar</button>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3 mb-6">
+            <div class="glass p-4 rounded-xl">
+                <div class="text-orange-400 text-sm font-bold mb-1">ING (Nómina)</div>
+                <div class="text-2xl font-mono" x-text="formatMoney(saldoIng)"></div>
+            </div>
+            <div class="glass p-4 rounded-xl">
+                <div class="text-blue-400 text-sm font-bold mb-1">Trade Republic</div>
+                <div class="text-2xl font-mono" x-text="formatMoney(saldoTr)"></div>
+            </div>
+        </div>
+
+        <div class="glass p-4 rounded-xl mb-6 border-l-4 border-purple-500">
+            <h3 class="text-sm text-gray-400 mb-2">Simulador de Inversión (ETF)</h3>
+            <div class="flex justify-between text-xs mb-1">
+                <span>Ahorro: <span x-text="percent + '%'"></span></span>
+                <span x-text="formatMoney(ingresosMes * (percent/100))"></span>
+            </div>
+            <input type="range" min="0" max="50" x-model="percent" class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer">
+            <p class="text-xs text-gray-500 mt-2">
+                Si ganas <span x-text="ingresosMes"></span>€, deberías mover esa cantidad a Trade Republic.
+            </p>
+        </div>
+
+        <div class="glass p-4 rounded-xl mb-6">
+            <div class="grid grid-cols-2 gap-2 mb-2">
+                <select x-model="newTx.type" class="bg-gray-800 p-2 rounded text-sm text-white border border-gray-600">
+                    <option value="expense">Gasto (-)</option>
+                    <option value="income">Ingreso (+)</option>
+                </select>
+                <select x-model="newTx.accountId" class="bg-gray-800 p-2 rounded text-sm text-white border border-gray-600">
+                    <option value="">Cuenta...</option>
+                    <template x-for="acc in accounts" :key="acc.id">
+                        <option :value="acc.id" x-text="acc.name"></option>
+                    </template>
+                </select>
+            </div>
+            <div class="grid grid-cols-2 gap-2 mb-2">
+                <input type="number" x-model="newTx.amount" placeholder="€" class="bg-gray-800 p-2 rounded text-sm text-white border border-gray-600">
+                <input type="text" x-model="newTx.category" placeholder="Concepto (Cine, Cena...)" class="bg-gray-800 p-2 rounded text-sm text-white border border-gray-600">
+            </div>
+            <button @click="addTransaction()" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-2 rounded-lg text-sm transition">
+                Añadir Movimiento
+            </button>
+        </div>
+
+        <h3 class="text-gray-400 text-sm mb-2 uppercase tracking-wide">Últimos movimientos</h3>
+        <div class="space-y-2">
+            <template x-for="tx in transactions" :key="tx.id">
+                <div class="glass p-3 rounded-lg flex justify-between items-center">
+                    <div>
+                        <div class="font-bold text-sm" x-text="tx.category"></div>
+                        <div class="text-xs text-gray-500" x-text="formatDate(tx.date) + ' | ' + getAccountName(tx.account_id)"></div>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <span class="font-mono font-bold" :class="tx.amount > 0 ? 'text-green-400' : 'text-white'" x-text="formatMoney(tx.amount)"></span>
+                        <button @click="deleteTransaction(tx.id)" class="text-red-500 hover:text-red-400 text-xs">X</button>
+                    </div>
+                </div>
+            </template>
+        </div>
+
+    </div>
+
+    <script>
+        // --- CONFIGURACIÓN (Rellena esto) ---
+        const SUPABASE_URL = 'https://pfohhjmeomixhzktwggl.supabase.co'; 
+        const SUPABASE_KEY = 'sb_publishable_t8scoBrGD4XNEozDZD3ZrA_XCl1kRaE';
+        // ------------------------------------
+
+        const { createClient } = supabase;
+        const db = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        function app() {
+            return {
+                accounts: [],
+                transactions: [],
+                saldoIng: 0,
+                saldoTr: 0,
+                ingresosMes: 2000, // Valor por defecto para el simulador
+                percent: 20, // Porcentaje de inversión por defecto
+                newTx: { type: 'expense', accountId: '', amount: '', category: '' },
+
+                async initData() {
+                    // 1. Cargar Cuentas
+                    const { data: accs } = await db.from('accounts').select('*');
+                    this.accounts = accs || [];
+
+                    // 2. Cargar Movimientos
+                    const { data: txs } = await db.from('transactions').select('*').order('date', { ascending: false });
+                    this.transactions = txs || [];
+
+                    this.calculateBalances();
+                    lucide.createIcons();
+                },
+
+                calculateBalances() {
+                    // Reiniciar contadores
+                    this.saldoIng = 0;
+                    this.saldoTr = 0;
+                    let ingresos = 0;
+
+                    // Buscar IDs de cuentas (asumiendo nombres)
+                    const ingId = this.accounts.find(a => a.name.includes('ING'))?.id;
+                    const trId = this.accounts.find(a => a.name.includes('Trade'))?.id;
+
+                    this.transactions.forEach(t => {
+                        if (t.account_id === ingId) this.saldoIng += t.amount;
+                        if (t.account_id === trId) this.saldoTr += t.amount;
+                        
+                        // Detectar ingresos de este mes para el simulador
+                        const isThisMonth = new Date(t.date).getMonth() === new Date().getMonth();
+                        if (t.amount > 0 && isThisMonth) ingresos += t.amount;
+                    });
+
+                    if (ingresos > 0) this.ingresosMes = ingresos;
+                },
+
+                async addTransaction() {
+                    if (!this.newTx.amount || !this.newTx.accountId) return alert("Faltan datos");
+                    
+                    const amount = this.newTx.type === 'expense' 
+                        ? -Math.abs(this.newTx.amount) 
+                        : Math.abs(this.newTx.amount);
+
+                    const { error } = await db.from('transactions').insert([{
+                        account_id: this.newTx.accountId,
+                        amount: amount,
+                        category: this.newTx.category,
+                        date: new Date().toISOString()
+                    }]);
+
+                    if (!error) {
+                        this.newTx.amount = '';
+                        this.newTx.category = '';
+                        this.initData(); // Recargar todo
+                    } else {
+                        alert(error.message);
+                    }
+                },
+
+                async deleteTransaction(id) {
+                    if(!confirm("¿Borrar?")) return;
+                    await db.from('transactions').delete().match({ id });
+                    this.initData();
+                },
+
+                // Utilidades visuales
+                formatMoney(amount) {
+                    return new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(amount);
+                },
+                formatDate(dateStr) {
+                    return new Date(dateStr).toLocaleDateString('es-ES', {day: '2-digit', month: 'short'});
+                },
+                getAccountName(id) {
+                    const acc = this.accounts.find(a => a.id === id);
+                    return acc ? acc.name : '?';
+                }
+            }
+        }
+    </script>
+</body>
+</html>
