@@ -3,106 +3,99 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gonzalo 2026 Simulator</title>
-    
+    <title>Gonzalo Finance Master</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <script src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
-
     <style>
-        body { background-color: #0b0f19; color: #cbd5e1; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-        .glass { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(10px); border: 1px solid rgba(148, 163, 184, 0.1); border-radius: 16px; }
-        .chart-container { position: relative; height: 350px; width: 100%; }
-        input, select { background: #1e293b; border: 1px solid #334155; color: white; padding: 10px; border-radius: 8px; width: 100%; outline: none; }
+        body { background-color: #0b0f19; color: #cbd5e1; font-family: system-ui, sans-serif; }
+        .glass { background: rgba(30, 41, 59, 0.6); backdrop-filter: blur(12px); border: 1px solid rgba(148, 163, 184, 0.1); border-radius: 16px; }
+        .chart-container { position: relative; height: 400px; width: 100%; }
+        input, select { background: #1e293b; border: 1px solid #334155; color: white; padding: 12px; border-radius: 8px; width: 100%; outline: none; }
         input:focus, select:focus { border-color: #3b82f6; }
     </style>
 </head>
-<body class="p-3 md:p-6 pb-32 max-w-7xl mx-auto overflow-x-hidden">
+<body class="p-4 md:p-8 pb-32 max-w-7xl mx-auto">
 
-    <div x-data="financeApp()" x-init="init()" class="space-y-6">
+    <div x-data="app()" x-init="init()" class="space-y-8">
 
-        <header class="flex flex-col md:flex-row justify-between items-center gap-4">
+        <header class="flex justify-between items-center">
             <div>
-                <h1 class="text-2xl font-bold text-white tracking-tight">Simulador 2026</h1>
-                <p class="text-xs text-gray-500">Patrimonio y Flujo de Caja Real</p>
+                <h1 class="text-3xl font-bold text-white tracking-tight">Simulador Financiero</h1>
+                <p class="text-sm text-gray-500">Proyección Real 2026 (Gastos vs Transferencias)</p>
             </div>
-            <div class="flex gap-3">
-                <button @click="showModal = true" class="bg-blue-600 hover:bg-blue-500 text-white px-5 py-2 rounded-xl font-bold shadow-lg transition flex items-center gap-2">
-                    <i data-lucide="plus-circle" class="w-5 h-5"></i> Añadir
-                </button>
-            </div>
+            <button @click="showModal = true" class="bg-blue-600 hover:bg-blue-500 text-white px-6 py-3 rounded-xl font-bold shadow-lg shadow-blue-900/20 flex items-center gap-2 transition hover:scale-105">
+                <i data-lucide="plus" class="w-5 h-5"></i> Añadir Regla
+            </button>
         </header>
 
-        <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            <div class="glass p-5 border-l-4 border-emerald-500">
-                <div class="text-[10px] text-gray-400 uppercase font-bold">Patrimonio Total (Hoy)</div>
-                <div class="text-3xl font-mono font-bold text-white" x-text="formatMoney(kpi.totalWealth)"></div>
-                <div class="text-xs text-emerald-400 mt-1">ING + Trade Rep. + Ahorros</div>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div class="glass p-6 border-l-4 border-yellow-500">
+                <div class="text-xs text-gray-400 uppercase font-bold tracking-wider">Patrimonio Total (Hoy)</div>
+                <div class="text-4xl font-mono font-bold text-white mt-2" x-text="formatMoney(kpi.totalWealth)"></div>
+                <div class="text-xs text-yellow-500 mt-2">Suma de todas tus cuentas</div>
+            </div>
+            
+            <div class="glass p-6 border-l-4 border-red-500">
+                <div class="text-xs text-gray-400 uppercase font-bold tracking-wider">Gastos Fijos Mensuales</div>
+                <div class="text-4xl font-mono font-bold text-red-400 mt-2" x-text="formatMoney(kpi.fixedExpenses)"></div>
+                <div class="text-xs text-gray-500 mt-2">Salida real de dinero</div>
             </div>
 
-            <div class="glass p-5">
-                <div class="text-[10px] text-gray-400 uppercase font-bold">Liquidez (Cuentas Operativas)</div>
-                <div class="text-2xl font-mono font-bold text-orange-400" x-text="formatMoney(kpi.liquidity)"></div>
-            </div>
-
-            <div class="glass p-5">
-                <div class="text-[10px] text-gray-400 uppercase font-bold">Inversión / Ahorro</div>
-                <div class="text-2xl font-mono font-bold text-purple-400" x-text="formatMoney(kpi.invested)"></div>
-            </div>
-
-            <div class="glass p-5">
-                <div class="text-[10px] text-gray-400 uppercase font-bold">Potencial Ahorro Mes</div>
-                <div class="text-2xl font-mono font-bold text-blue-400" x-text="formatMoney(kpi.monthlyFreeFlow)"></div>
-                <div class="text-[10px] text-gray-500">Ingresos - Gastos Reales</div>
+            <div class="glass p-6 border-l-4 border-blue-500">
+                <div class="text-xs text-gray-400 uppercase font-bold tracking-wider">Movimiento Interno (Ahorro)</div>
+                <div class="text-4xl font-mono font-bold text-blue-400 mt-2" x-text="formatMoney(kpi.internalTransfers)"></div>
+                <div class="text-xs text-gray-500 mt-2">ING -> TR / Reforma (No se pierde)</div>
             </div>
         </div>
 
-        <div class="glass p-5">
-            <div class="flex justify-between items-center mb-4">
-                <h3 class="font-bold text-white flex items-center gap-2">
-                    <i data-lucide="trending-up" class="text-blue-400 w-5 h-5"></i>
-                    Proyección Anual 2026
+        <div class="glass p-6">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="font-bold text-lg text-white flex items-center gap-2">
+                    <i data-lucide="line-chart" class="text-yellow-400 w-5 h-5"></i>
+                    Futuro de tu Patrimonio
                 </h3>
-                <div class="text-xs text-gray-400 bg-gray-800 px-3 py-1 rounded-full">Simulación a 12 meses</div>
+                <div class="flex gap-4 text-xs">
+                    <div class="flex items-center gap-2"><div class="w-3 h-3 bg-red-500 rounded"></div> Gasto (Resta)</div>
+                    <div class="flex items-center gap-2"><div class="w-3 h-3 bg-blue-500 rounded"></div> Transferencia (Neutro)</div>
+                    <div class="flex items-center gap-2"><div class="w-3 h-3 bg-yellow-400 rounded-full"></div> Tu Dinero (Total)</div>
+                </div>
             </div>
             <div class="chart-container">
                 <canvas id="projectionChart"></canvas>
             </div>
-            <p class="text-xs text-center text-gray-500 mt-2">
-                * La línea amarilla muestra tu patrimonio total creciendo. Las barras muestran lo que entra y sale cada mes.
-            </p>
         </div>
 
-        <div class="glass p-5">
-            <h3 class="font-bold text-white mb-4 text-sm uppercase tracking-widest">Tus Reglas del Juego (Recurrente)</h3>
+        <div class="glass p-6">
+            <h3 class="font-bold text-gray-400 uppercase text-xs mb-4">Tus Reglas Activas</h3>
             <div class="overflow-x-auto">
                 <table class="w-full text-left text-sm text-gray-300">
-                    <thead class="text-xs uppercase bg-gray-800 text-gray-500">
+                    <thead class="bg-gray-800/50 text-xs uppercase text-gray-500">
                         <tr>
-                            <th class="p-3">Día</th>
                             <th class="p-3">Concepto</th>
                             <th class="p-3">Tipo</th>
-                            <th class="p-3 text-right">Importe</th>
-                            <th class="p-3 text-center">Acción</th>
+                            <th class="p-3">Fin</th>
+                            <th class="p-3 text-right">Cantidad</th>
+                            <th class="p-3 text-center"></th>
                         </tr>
                     </thead>
-                    <tbody class="divide-y divide-gray-800">
+                    <tbody class="divide-y divide-gray-700">
                         <template x-for="rule in recurringRules" :key="rule.id">
-                            <tr class="hover:bg-gray-800/50">
-                                <td class="p-3 font-mono text-blue-400" x-text="rule.day_of_month"></td>
-                                <td class="p-3 font-medium text-white" x-text="rule.name"></td>
+                            <tr class="hover:bg-white/5">
+                                <td class="p-3 font-bold text-white" x-text="rule.name"></td>
                                 <td class="p-3">
-                                    <span class="px-2 py-1 rounded text-[10px] font-bold uppercase border"
-                                          :class="{
-                                            'border-emerald-500 text-emerald-400 bg-emerald-500/10': rule.type === 'income',
-                                            'border-red-500 text-red-400 bg-red-500/10': rule.type === 'expense',
-                                            'border-purple-500 text-purple-400 bg-purple-500/10': rule.type === 'investment'
-                                          }"
-                                          x-text="translateType(rule.type)">
+                                    <span class="px-2 py-1 rounded text-[10px] uppercase font-bold border"
+                                        :class="{
+                                            'border-red-500 text-red-400': rule.type === 'expense',
+                                            'border-green-500 text-green-400': rule.type === 'income',
+                                            'border-blue-500 text-blue-400': rule.type === 'transfer'
+                                        }"
+                                        x-text="rule.type === 'transfer' ? 'Transferencia Interna' : (rule.type === 'income' ? 'Ingreso' : 'Gasto')">
                                     </span>
                                 </td>
+                                <td class="p-3 text-xs text-gray-400" x-text="rule.end_date ? new Date(rule.end_date).toLocaleDateString() : 'Indefinido'"></td>
                                 <td class="p-3 text-right font-mono" x-text="formatMoney(rule.amount)"></td>
                                 <td class="p-3 text-center">
                                     <button @click="deleteRule(rule.id)" class="text-red-500 hover:text-white"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
@@ -115,55 +108,54 @@
         </div>
 
         <div x-show="showModal" class="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4" x-transition style="display: none;">
-            <div class="bg-gray-900 border border-gray-700 w-full max-w-md rounded-2xl p-6 relative">
-                <button @click="showModal = false" class="absolute top-4 right-4 text-gray-500"><i data-lucide="x"></i></button>
-                <h2 class="text-xl font-bold text-white mb-6">Añadir Regla / Movimiento</h2>
-
-                <div class="flex gap-2 mb-4 bg-gray-800 p-1 rounded-lg">
-                    <button @click="isRecurring = false" :class="!isRecurring ? 'bg-blue-600 text-white' : 'text-gray-400'" class="flex-1 py-2 rounded font-bold text-xs">Puntual (Ya hecho)</button>
-                    <button @click="isRecurring = true" :class="isRecurring ? 'bg-purple-600 text-white' : 'text-gray-400'" class="flex-1 py-2 rounded font-bold text-xs">Regla Mensual (Futuro)</button>
-                </div>
-
+            <div class="bg-gray-900 border border-gray-700 w-full max-w-md rounded-2xl p-6 relative shadow-2xl">
+                <button @click="showModal = false" class="absolute top-4 right-4 text-gray-500 hover:text-white"><i data-lucide="x"></i></button>
+                
+                <h2 class="text-xl font-bold text-white mb-6">Añadir Regla Recurrente</h2>
+                
                 <div class="space-y-4">
                     <div>
-                        <label class="text-xs text-gray-500">Concepto</label>
-                        <input type="text" x-model="form.name" placeholder="Ej: Mercadona, Transferencia TR...">
+                        <label class="text-xs text-gray-500 mb-1 block">¿Qué es?</label>
+                        <select x-model="form.type">
+                            <option value="expense">🔴 Gasto (Resta Patrimonio)</option>
+                            <option value="transfer">🔵 Transferencia Interna (Neutro - ING a TR)</option>
+                            <option value="income">🟢 Ingreso (Suma Patrimonio)</option>
+                        </select>
                     </div>
+
                     <div>
-                        <label class="text-xs text-gray-500">Cantidad</label>
-                        <input type="number" x-model="form.amount" placeholder="0.00">
+                        <label class="text-xs text-gray-500 mb-1 block">Concepto</label>
+                        <input type="text" x-model="form.name" placeholder="Ej: Netflix, TR, Reforma...">
                     </div>
-                    
+
                     <div class="grid grid-cols-2 gap-4">
                         <div>
-                            <label class="text-xs text-gray-500">Tipo Real</label>
-                            <select x-model="form.type">
-                                <option value="expense">Gasto (Pierdo dinero)</option>
-                                <option value="income">Ingreso (Gano dinero)</option>
-                                <option value="investment">Transferencia / Ahorro (Muevo dinero)</option>
-                            </select>
+                            <label class="text-xs text-gray-500 mb-1 block">Cantidad</label>
+                            <input type="number" x-model="form.amount" placeholder="0.00">
                         </div>
                         <div>
-                            <label class="text-xs text-gray-500">Cuenta Origen</label>
-                            <select x-model="form.account_id">
-                                <template x-for="acc in accounts" :key="acc.id">
-                                    <option :value="acc.id" x-text="acc.name"></option>
-                                </template>
-                            </select>
+                            <label class="text-xs text-gray-500 mb-1 block">Día del mes</label>
+                            <input type="number" x-model="form.day_of_month" placeholder="1">
                         </div>
                     </div>
 
-                    <div x-show="isRecurring">
-                        <label class="text-xs text-gray-500">Día del mes</label>
-                        <input type="number" x-model="form.day_of_month" placeholder="Ej: 1, 5, 28" max="31">
-                    </div>
-                    <div x-show="!isRecurring">
-                        <label class="text-xs text-gray-500">Fecha</label>
-                        <input type="date" x-model="form.date">
+                    <div>
+                        <label class="text-xs text-gray-500 mb-1 block">¿Tiene fecha fin? (Opcional)</label>
+                        <input type="date" x-model="form.end_date" class="text-gray-400">
+                        <p class="text-[10px] text-gray-600 mt-1">Si lo dejas vacío, será para siempre.</p>
                     </div>
 
-                    <button @click="save()" class="w-full bg-blue-600 hover:bg-blue-500 py-3 rounded-xl text-white font-bold mt-2 shadow-lg">
-                        Guardar
+                    <div class="pt-2">
+                        <label class="text-xs text-gray-500 mb-1 block">Cuenta Origen</label>
+                        <select x-model="form.account_id">
+                            <template x-for="acc in accounts" :key="acc.id">
+                                <option :value="acc.id" x-text="acc.name"></option>
+                            </template>
+                        </select>
+                    </div>
+
+                    <button @click="saveRule()" class="w-full bg-blue-600 hover:bg-blue-500 py-3 rounded-xl text-white font-bold shadow-lg mt-2">
+                        Guardar Regla
                     </button>
                 </div>
             </div>
@@ -172,30 +164,23 @@
     </div>
 
     <script>
-        // ============================
-        // TUS CLAVES
+        // ==========================
+        // TUS CLAVES SUPABASE
         const SUPABASE_URL = 'https://pfohhjmeomixhzktwggl.supabase.co'; 
         const SUPABASE_KEY = 'sb_publishable_t8scoBrGD4XNEozDZD3ZrA_XCl1kRaE';
-        // ============================
+        // ==========================
 
         const { createClient } = supabase;
         const db = createClient(SUPABASE_URL, SUPABASE_KEY);
-        const c = { green: '#10b981', red: '#ef4444', blue: '#3b82f6', purple: '#a855f7', yellow: '#facc15' };
 
-        function financeApp() {
+        function app() {
             return {
                 showModal: false,
-                isRecurring: false,
                 accounts: [],
                 recurringRules: [],
-                transactions: [],
-                
-                kpi: { totalWealth: 0, liquidity: 0, invested: 0, monthlyFreeFlow: 0 },
-                
-                form: { 
-                    name: '', amount: '', type: 'expense', account_id: '', 
-                    day_of_month: '', date: new Date().toISOString().split('T')[0] 
-                },
+                transactions: [], // Para calcular saldo inicial real
+                kpi: { totalWealth: 0, fixedExpenses: 0, internalTransfers: 0 },
+                form: { type: 'expense', name: '', amount: '', day_of_month: '', end_date: '', account_id: '' },
 
                 async init() {
                     await this.loadData();
@@ -203,109 +188,94 @@
                 },
 
                 async loadData() {
+                    // Cargar datos
                     const [accs, recs, txs] = await Promise.all([
                         db.from('accounts').select('*'),
                         db.from('recurring').select('*').order('day_of_month'),
-                        db.from('transactions').select('*').order('date')
+                        db.from('transactions').select('*')
                     ]);
 
                     this.accounts = accs.data || [];
                     this.recurringRules = recs.data || [];
                     this.transactions = txs.data || [];
 
-                    // 1. CALCULAR SALDOS REALES HOY
-                    // Saldo Inicial + Movimientos Pasados
-                    this.accounts = this.accounts.map(acc => {
+                    // 1. CALCULAR PATRIMONIO ACTUAL REAL (Saldo Inicial + Transacciones Pasadas)
+                    this.kpi.totalWealth = 0;
+                    this.accounts.forEach(acc => {
                         const accTx = this.transactions.filter(t => t.account_id === acc.id);
-                        const sum = accTx.reduce((acc, curr) => {
-                            // Si es inversión, en Transaction se guarda negativo porque sale de la cuenta
-                            // pero conceptualmente no es gasto. Aquí solo calculamos saldo de cuenta.
-                            return acc + Number(curr.amount);
-                        }, 0);
-                        return { ...acc, realBalance: (Number(acc.initial_balance) || 0) + sum };
+                        const sumTx = accTx.reduce((sum, t) => sum + Number(t.amount), 0);
+                        const realBalance = (Number(acc.initial_balance) || 0) + sumTx;
+                        this.kpi.totalWealth += realBalance;
                     });
 
-                    // Init form default
-                    if(this.accounts.length && !this.form.account_id) this.form.account_id = this.accounts[0].id;
+                    // Init form
+                    if(this.accounts.length) this.form.account_id = this.accounts[0].id;
 
-                    this.calculateKPIs();
-                    this.renderProjectionChart();
+                    this.calculateStructuralKPIs();
+                    this.renderChart();
                 },
 
-                calculateKPIs() {
-                    // Patrimonio Total = Suma de saldos de todas las cuentas
-                    this.kpi.totalWealth = this.accounts.reduce((sum, acc) => sum + acc.realBalance, 0);
+                calculateStructuralKPIs() {
+                    this.kpi.fixedExpenses = 0;
+                    this.kpi.internalTransfers = 0;
 
-                    // Liquidez vs Inversión
-                    this.kpi.invested = 0;
-                    this.kpi.liquidity = 0;
-
-                    this.accounts.forEach(acc => {
-                        // Detectamos si la cuenta es de inversión por nombre (simple)
-                        if (acc.name.toLowerCase().includes('trade') || acc.name.toLowerCase().includes('inver') || acc.name.toLowerCase().includes('ahorro')) {
-                            this.kpi.invested += acc.realBalance;
-                        } else {
-                            this.kpi.liquidity += acc.realBalance;
+                    // Calculamos basándonos en las reglas activas HOY
+                    this.recurringRules.forEach(r => {
+                        const amt = Number(r.amount);
+                        // Solo sumamos si no ha caducado
+                        if (!r.end_date || new Date(r.end_date) > new Date()) {
+                            if(r.type === 'expense') this.kpi.fixedExpenses += amt;
+                            if(r.type === 'transfer') this.kpi.internalTransfers += amt;
                         }
                     });
-
-                    // Potencial de Ahorro Mensual (Basado en reglas)
-                    let monthlyIncome = 0;
-                    let monthlyExpense = 0; // Gasto REAL (Netflix)
-                    // Las transferencias NO son gastos, así que no restan del "Free Flow" estructural,
-                    // aunque sí restan de la liquidez operativa.
-                    
-                    this.recurringRules.forEach(r => {
-                        if(r.type === 'income') monthlyIncome += Number(r.amount);
-                        if(r.type === 'expense') monthlyExpense += Number(r.amount);
-                        // Investment type se ignora aquí porque es ahorro
-                    });
-                    this.kpi.monthlyFreeFlow = monthlyIncome - monthlyExpense;
                 },
 
-                renderProjectionChart() {
+                renderChart() {
                     const ctx = document.getElementById('projectionChart');
                     Chart.helpers.each(Chart.instances, i => i.destroy());
 
-                    // PROYECCIÓN A 12 MESES
                     const labels = [];
-                    const dataWealth = []; // Línea Patrimonio
-                    const dataIncome = []; // Barra Ingresos
-                    const dataExpense = []; // Barra Gastos (Solo reales)
-                    const dataInvest = []; // Barra Transferencias (Para ver el esfuerzo ahorrador)
+                    const dataWealth = [];
+                    const dataIncome = [];
+                    const dataExpense = [];
+                    const dataTransfer = [];
 
-                    let currentSimulatedWealth = this.kpi.totalWealth; // Empezamos con lo que tienes HOY
+                    let currentWealth = this.kpi.totalWealth;
                     const today = new Date();
 
+                    // PROYECCIÓN A 12 MESES
                     for (let i = 0; i < 12; i++) {
-                        // Crear fecha para etiqueta
-                        const d = new Date(today.getFullYear(), today.getMonth() + i, 1);
-                        labels.push(d.toLocaleDateString('es-ES', { month: 'short', year: '2-digit' }));
+                        const targetDate = new Date(today.getFullYear(), today.getMonth() + i, 1);
+                        labels.push(targetDate.toLocaleDateString('es-ES', { month: 'short', year: '2-digit' }));
 
-                        // Calcular flujo de este mes simulado
-                        let mIncome = 0;
-                        let mExpense = 0;
-                        let mInvest = 0;
+                        let monthIncome = 0;
+                        let monthExpense = 0;
+                        let monthTransfer = 0;
 
+                        // Recorrer reglas para este mes específico
                         this.recurringRules.forEach(r => {
-                            // Aquí podrías añadir lógica de "End Date" si quisieras
+                            // LÓGICA DE FECHA FIN:
+                            // Si la regla tiene fecha fin Y la fecha fin es ANTERIOR a este mes de la gráfica...
+                            // ... IGNORAMOS la regla (ya no se paga)
+                            if (r.end_date && new Date(r.end_date) < targetDate) {
+                                return; 
+                            }
+
                             const amt = Number(r.amount);
-                            if (r.type === 'income') mIncome += amt;
-                            else if (r.type === 'expense') mExpense += amt;
-                            else if (r.type === 'investment') mInvest += amt; 
+                            if (r.type === 'income') monthIncome += amt;
+                            if (r.type === 'expense') monthExpense += amt;
+                            if (r.type === 'transfer') monthTransfer += amt;
                         });
 
-                        // ACTUALIZAR PATRIMONIO SIMULADO
-                        // Patrimonio = Anterior + Ingresos - Gastos REALES
-                        // Las transferencias de inversión NO restan patrimonio (es mover dinero), 
-                        // pero los gastos (Netflix) SÍ restan.
-                        const netChange = mIncome - mExpense; 
-                        currentSimulatedWealth += netChange;
+                        // CÁLCULO DEL PATRIMONIO
+                        // Solo Ingresos y Gastos afectan al total.
+                        // Transferencias NO, porque el dinero se queda en casa.
+                        currentWealth = currentWealth + monthIncome - monthExpense;
 
-                        dataWealth.push(currentSimulatedWealth);
-                        dataIncome.push(mIncome);
-                        dataExpense.push(mExpense);
-                        dataInvest.push(mInvest); // Solo visual, no afecta cálculo patrimonio
+                        dataWealth.push(currentWealth);
+                        dataIncome.push(monthIncome);
+                        dataExpense.push(monthExpense); // Solo lo que pierdes de verdad
+                        dataTransfer.push(monthTransfer); // Solo visual
                     }
 
                     new Chart(ctx, {
@@ -315,32 +285,36 @@
                             datasets: [
                                 {
                                     type: 'line',
-                                    label: 'Patrimonio Acumulado (Proyección)',
+                                    label: 'Patrimonio Total',
                                     data: dataWealth,
-                                    borderColor: c.yellow,
+                                    borderColor: '#facc15', // Amarillo
                                     backgroundColor: 'rgba(250, 204, 21, 0.1)',
                                     borderWidth: 3,
+                                    tension: 0.3,
                                     fill: true,
-                                    yAxisID: 'yWealth',
-                                    tension: 0.3
+                                    order: 1,
+                                    yAxisID: 'yWealth'
+                                },
+                                {
+                                    label: 'Gastos (Salida)',
+                                    data: dataExpense,
+                                    backgroundColor: '#ef4444', // Rojo
+                                    order: 2,
+                                    stack: 'flow'
+                                },
+                                {
+                                    label: 'Transferencia Interna (Ahorro)',
+                                    data: dataTransfer,
+                                    backgroundColor: '#3b82f6', // Azul
+                                    order: 3,
+                                    stack: 'flow'
                                 },
                                 {
                                     label: 'Ingresos',
                                     data: dataIncome,
-                                    backgroundColor: c.green,
-                                    order: 2
-                                },
-                                {
-                                    label: 'Gastos Reales',
-                                    data: dataExpense,
-                                    backgroundColor: c.red,
-                                    order: 3
-                                },
-                                {
-                                    label: 'Ahorro/Transferencias',
-                                    data: dataInvest,
-                                    backgroundColor: c.purple,
-                                    order: 4
+                                    backgroundColor: '#10b981', // Verde
+                                    order: 4,
+                                    stack: 'flow' // Apilamos todo para ver volumen de movimiento
                                 }
                             ]
                         },
@@ -349,22 +323,19 @@
                             maintainAspectRatio: false,
                             interaction: { mode: 'index', intersect: false },
                             scales: {
-                                x: { grid: { display: false }, ticks: { color: c.slate } },
-                                y: { 
-                                    display: false, // Ocultamos eje flujo para limpieza
-                                    grid: { display: false } 
-                                },
+                                x: { grid: { display: false }, ticks: { color: '#94a3b8' } },
+                                y: { display: false }, // Ocultamos eje izquierdo
                                 yWealth: {
                                     position: 'right',
                                     grid: { color: '#334155' },
-                                    ticks: { color: c.yellow, callback: (v) => v/1000 + 'k' }
+                                    ticks: { color: '#facc15', callback: v => v/1000 + 'k' }
                                 }
                             },
                             plugins: {
                                 legend: { labels: { color: 'white' } },
                                 tooltip: {
                                     callbacks: {
-                                        label: (ctx) => ctx.dataset.label + ': ' + new Intl.NumberFormat('es-ES', {style:'currency', currency:'EUR'}).format(ctx.raw)
+                                        label: (c) => c.dataset.label + ': ' + new Intl.NumberFormat('es-ES', {style:'currency',currency:'EUR'}).format(c.raw)
                                     }
                                 }
                             }
@@ -372,58 +343,32 @@
                     });
                 },
 
-                // --- GUARDAR ---
-                async save() {
+                async saveRule() {
                     if(!this.form.name || !this.form.amount) return alert("Faltan datos");
-                    
-                    // Lógica de signo:
-                    // Expense: Negativo
-                    // Investment: Negativo (sale de la cuenta origen)
-                    // Income: Positivo
-                    let val = Number(this.form.amount);
-                    if(this.form.type !== 'income') val = -Math.abs(val);
 
-                    if (this.isRecurring) {
-                        // Guardar Regla
-                        const { error } = await db.from('recurring').insert([{
-                            name: this.form.name,
-                            amount: Math.abs(val), // En recurring guardamos absoluto y usamos 'type' para saber signo
-                            type: this.form.type,
-                            account_id: this.form.account_id,
-                            day_of_month: this.form.day_of_month || 1
-                        }]);
-                        if(error) alert(error.message);
-                    } else {
-                        // Guardar Transacción
-                        const { error } = await db.from('transactions').insert([{
-                            category: this.form.name,
-                            amount: val, 
-                            // Si es investment, la categoría lo reflejará o podríamos añadir columna type
-                            // De momento usaremos la lógica de nombres
-                            date: this.form.date,
-                            account_id: this.form.account_id
-                        }]);
-                        if(error) alert(error.message);
-                    }
+                    const { error } = await db.from('recurring').insert([{
+                        name: this.form.name,
+                        amount: Number(this.form.amount),
+                        type: this.form.type, // Ahora acepta 'transfer'
+                        day_of_month: this.form.day_of_month || 1,
+                        end_date: this.form.end_date || null,
+                        account_id: this.form.account_id
+                    }]);
 
-                    this.showModal = false;
-                    this.form.name = ''; this.form.amount = '';
-                    this.loadData();
-                },
-                
-                async deleteRule(id) {
-                    if(confirm("¿Borrar regla?")) {
-                        await db.from('recurring').delete().eq('id', id);
+                    if(error) alert(error.message);
+                    else {
+                        this.showModal = false;
                         this.loadData();
                     }
                 },
 
-                // Utils
-                translateType(t) {
-                    if(t==='income') return 'Ingreso';
-                    if(t==='expense') return 'Gasto';
-                    return 'Transf. Ahorro';
+                async deleteRule(id) {
+                    if(confirm("¿Borrar?")) {
+                        await db.from('recurring').delete().eq('id', id);
+                        this.loadData();
+                    }
                 },
+                
                 formatMoney(n) { return new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(n); }
             }
         }
