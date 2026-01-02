@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gonzalo Finance - Zero Investment Start</title>
+    <title>Gonzalo: Doble Acumulación</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <script src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
@@ -12,19 +12,19 @@
     <style>
         body { background-color: #0b0f19; color: #cbd5e1; font-family: system-ui, sans-serif; }
         .glass { background: rgba(30, 41, 59, 0.6); backdrop-filter: blur(12px); border: 1px solid rgba(148, 163, 184, 0.1); border-radius: 16px; }
-        .chart-container { position: relative; height: 420px; width: 100%; }
+        .chart-container { position: relative; height: 450px; width: 100%; }
         input, select { background: #1e293b; border: 1px solid #334155; color: white; padding: 12px; border-radius: 8px; width: 100%; outline: none; }
-        input:focus, select:focus { border-color: #a855f7; }
+        input:focus, select:focus { border-color: #3b82f6; }
     </style>
 </head>
-<body class="p-4 md:p-8 pb-32 max-w-7xl mx-auto selection:bg-purple-500 selection:text-white">
+<body class="p-4 md:p-8 pb-32 max-w-7xl mx-auto selection:bg-blue-500 selection:text-white">
 
     <div x-data="app()" x-init="init()" class="space-y-8">
 
         <header class="flex flex-col md:flex-row justify-between items-center gap-4">
             <div>
                 <h1 class="text-3xl font-bold text-white tracking-tight">Gonzalo Finance</h1>
-                <p class="text-sm text-gray-500">Cartera de Inversión desde Cero (2026)</p>
+                <p class="text-sm text-gray-500">Visualización de Doble Motor (Ahorro + Inversión)</p>
             </div>
             <button @click="showModal = true" class="bg-blue-600 hover:bg-blue-500 text-white px-6 py-3 rounded-xl font-bold shadow-lg flex items-center gap-2 transition hover:scale-105">
                 <i data-lucide="plus" class="w-5 h-5"></i> Nuevo Movimiento
@@ -35,19 +35,19 @@
             <div class="glass p-6 border-l-4 border-yellow-500">
                 <div class="text-[10px] text-gray-400 uppercase font-bold tracking-wider">Patrimonio Total</div>
                 <div class="text-3xl font-mono font-bold text-white mt-1" x-text="formatMoney(kpi.totalWealth)"></div>
-                <div class="text-xs text-yellow-500 mt-1">ING + TR (Efectivo) + Inversión</div>
+                <div class="text-xs text-yellow-500 mt-1">Suma Global</div>
+            </div>
+
+            <div class="glass p-6 border-l-4 border-blue-500 bg-blue-900/10">
+                <div class="text-[10px] text-blue-300 uppercase font-bold tracking-wider">Hucha Ahorro (Base 2k)</div>
+                <div class="text-3xl font-mono font-bold text-blue-400 mt-1" x-text="formatMoney(kpi.savingsAccumulated)"></div>
+                <div class="text-xs text-blue-300 mt-1">Base 2.000€ + 125€/mes</div>
             </div>
 
             <div class="glass p-6 border-l-4 border-purple-500 bg-purple-900/10">
-                <div class="text-[10px] text-purple-300 uppercase font-bold tracking-wider">Cartera Inversión (ETF)</div>
+                <div class="text-[10px] text-purple-300 uppercase font-bold tracking-wider">Cartera Inversión</div>
                 <div class="text-3xl font-mono font-bold text-purple-400 mt-1" x-text="formatMoney(kpi.investedAccumulated)"></div>
-                <div class="text-xs text-purple-300 mt-1">Acumulado real (Empieza en 0)</div>
-            </div>
-            
-            <div class="glass p-6 border-l-4 border-blue-500">
-                <div class="text-[10px] text-gray-400 uppercase font-bold tracking-wider">Saldo Líquido TR</div>
-                <div class="text-2xl font-mono font-bold text-blue-400 mt-1" x-text="formatMoney(kpi.trBalance)"></div>
-                <div class="text-xs text-gray-500 mt-1">Efectivo sin invertir</div>
+                <div class="text-xs text-purple-300 mt-1">Base 0€ + 50€/mes</div>
             </div>
 
             <div class="glass p-6 border-l-4 border-red-500">
@@ -59,12 +59,13 @@
         <div class="glass p-6">
             <div class="flex justify-between items-center mb-6">
                 <h3 class="font-bold text-lg text-white flex items-center gap-2">
-                    <i data-lucide="trending-up" class="text-purple-400 w-5 h-5"></i>
-                    Proyección de la Cartera
+                    <i data-lucide="trending-up" class="text-blue-400 w-5 h-5"></i>
+                    Tus Motores de Crecimiento
                 </h3>
-                <div class="text-xs text-gray-400 text-right">
-                    <span class="block text-purple-400">🟣 Línea Punteada: Inversión (0 -> 50 -> 100...)</span>
-                    <span class="block text-yellow-500">🟡 Línea Sólida: Patrimonio Total</span>
+                <div class="text-xs text-gray-400 text-right space-y-1">
+                    <span class="block text-yellow-500">🟡 Patrimonio Total</span>
+                    <span class="block text-blue-400">🔵 Ahorro (2.000 -> Crece)</span>
+                    <span class="block text-purple-400">🟣 Inversión (0 -> Crece)</span>
                 </div>
             </div>
             <div class="chart-container">
@@ -93,7 +94,7 @@
                                         :class="{
                                             'border-red-500 text-red-400': rule.type === 'expense',
                                             'border-green-500 text-green-400': rule.type === 'income',
-                                            'border-blue-500 text-blue-400': rule.type === 'transfer',
+                                            'border-blue-500 text-blue-400 bg-blue-900/20': rule.type === 'transfer',
                                             'border-purple-500 text-purple-400 bg-purple-900/20': rule.type === 'investment'
                                         }"
                                         x-text="translateType(rule.type)">
@@ -120,8 +121,8 @@
                         <label class="text-xs text-gray-400 font-bold mb-1 block uppercase">Tipo</label>
                         <select x-model="form.type" class="font-bold">
                             <option value="expense">🔴 Gasto</option>
-                            <option value="transfer">🔵 Ahorro / Transferencia</option>
-                            <option value="investment">🟣 Inversión (Suma a Cartera)</option>
+                            <option value="transfer">🔵 Ahorro (Suma a la línea Azul)</option>
+                            <option value="investment">🟣 Inversión (Suma a la línea Morada)</option>
                             <option value="income">🟢 Ingreso</option>
                         </select>
                     </div>
@@ -161,6 +162,8 @@
         const SUPABASE_KEY = 'sb_publishable_t8scoBrGD4XNEozDZD3ZrA_XCl1kRaE';
         // ==========================
 
+        const INITIAL_SAVINGS_BASE = 2000; // <--- AQUÍ ESTÁN TUS 2000€ DE BASE
+
         const { createClient } = supabase;
         const db = createClient(SUPABASE_URL, SUPABASE_KEY);
 
@@ -170,7 +173,7 @@
                 accounts: [],
                 recurringRules: [],
                 transactions: [], 
-                kpi: { totalWealth: 0, fixedExpenses: 0, investedAccumulated: 0, trBalance: 0 },
+                kpi: { totalWealth: 0, fixedExpenses: 0, investedAccumulated: 0, savingsAccumulated: 0 },
                 form: { type: 'expense', name: '', amount: '', day_of_month: '', account_id: '' },
 
                 async init() {
@@ -189,28 +192,19 @@
                     this.recurringRules = recs.data || [];
                     this.transactions = txs.data || [];
 
-                    // 1. PATRIMONIO TOTAL (Suma de todo el dinero en todas las cuentas)
+                    // 1. PATRIMONIO TOTAL
                     this.kpi.totalWealth = 0;
                     this.accounts.forEach(acc => {
                         const accTx = this.transactions.filter(t => t.account_id === acc.id);
                         const sumTx = accTx.reduce((sum, t) => sum + Number(t.amount), 0);
-                        const currentBalance = (Number(acc.initial_balance) || 0) + sumTx;
-                        this.kpi.totalWealth += currentBalance;
-
-                        // Detectar saldo en TR para mostrarlo aparte como "Liquidez TR"
-                        if(acc.name.toLowerCase().includes('trade')) {
-                            this.kpi.trBalance = currentBalance;
-                        }
+                        this.kpi.totalWealth += (Number(acc.initial_balance) || 0) + sumTx;
                     });
-
-                    // 2. INVERSIÓN ACUMULADA REAL (Empieza en 0 según tus indicaciones)
-                    // Solo sumamos transacciones pasadas marcadas como 'investment' (si las hubiera)
-                    // Si acabas de empezar, esto será 0.
-                    const pastInvestments = this.transactions
-                        .filter(t => this.isInvestment(t))
-                        .reduce((sum, t) => sum + Math.abs(Number(t.amount)), 0);
                     
-                    this.kpi.investedAccumulated = pastInvestments;
+                    // 2. ACUMULADOS ACTUALES (Para los KPIs)
+                    // Inversión empieza en 0
+                    this.kpi.investedAccumulated = 0; 
+                    // Ahorro empieza en 2000
+                    this.kpi.savingsAccumulated = INITIAL_SAVINGS_BASE;
 
                     if(this.accounts.length) this.form.account_id = this.accounts[0].id;
 
@@ -234,6 +228,7 @@
                     const labels = [];
                     const dataWealth = [];
                     const dataInvestAccumulated = []; 
+                    const dataSavingsAccumulated = []; // NUEVA DATA
                     
                     const dataIncome = [];
                     const dataExpense = [];
@@ -241,7 +236,9 @@
                     const dataInvestMonthly = [];
 
                     let currentWealth = this.kpi.totalWealth;
-                    let currentInvested = this.kpi.investedAccumulated; // EMPIEZA EN 0 (o lo que hayas invertido ya manualmente)
+                    let currentInvested = 0; // Empieza en 0
+                    let currentSavings = INITIAL_SAVINGS_BASE; // Empieza en 2000
+
                     const today = new Date();
 
                     for (let i = 0; i < 12; i++) {
@@ -256,16 +253,25 @@
                             const amt = Number(r.amount);
                             if (r.type === 'income') mIncome += amt;
                             if (r.type === 'expense') mExpense += amt;
-                            if (r.type === 'transfer') mTransfer += amt;
-                            if (r.type === 'investment') mInvest += amt;
+                            
+                            // AHORA DIFERENCIAMOS:
+                            if (r.type === 'transfer') { // Ahorro
+                                mTransfer += amt;
+                            }
+                            if (r.type === 'investment') { // Inversión
+                                mInvest += amt;
+                            }
                         });
 
                         // CÁLCULOS
                         currentWealth = currentWealth + mIncome - mExpense;
-                        currentInvested = currentInvested + mInvest; // Sumamos solo los 50€
+                        
+                        currentInvested = currentInvested + mInvest; // +50
+                        currentSavings = currentSavings + mTransfer; // +125 (sobre la base de 2000)
 
                         dataWealth.push(currentWealth);
                         dataInvestAccumulated.push(currentInvested);
+                        dataSavingsAccumulated.push(currentSavings);
                         
                         dataIncome.push(mIncome);
                         dataExpense.push(mExpense);
@@ -292,11 +298,24 @@
                                 },
                                 {
                                     type: 'line',
-                                    label: 'Cartera Inversión (Acumulado)',
+                                    label: 'Hucha Ahorro (Base 2k)', // LÍNEA AZUL
+                                    data: dataSavingsAccumulated,
+                                    borderColor: '#3b82f6', 
+                                    borderWidth: 3,
+                                    borderDash: [2, 2], // Punteado fino
+                                    pointBackgroundColor: '#3b82f6',
+                                    tension: 0.2,
+                                    fill: false,
+                                    order: 0, 
+                                    yAxisID: 'yWealth'
+                                },
+                                {
+                                    type: 'line',
+                                    label: 'Cartera Inversión', // LÍNEA MORADA
                                     data: dataInvestAccumulated,
                                     borderColor: '#a855f7', 
                                     borderWidth: 3,
-                                    borderDash: [5, 5],
+                                    borderDash: [5, 5], // Punteado largo
                                     pointBackgroundColor: '#a855f7',
                                     tension: 0.2,
                                     fill: false,
@@ -316,7 +335,7 @@
                                     order: 4, stack: 'flow'
                                 },
                                 {
-                                    label: 'Ahorro (125€)',
+                                    label: 'Aport. Ahorro (125€)',
                                     data: dataTransfer,
                                     backgroundColor: '#3b82f6',
                                     order: 5, stack: 'flow'
@@ -376,11 +395,6 @@
                 translateType(t) {
                     const dict = { 'expense': 'Gasto', 'income': 'Ingreso', 'transfer': 'Ahorro', 'investment': 'Inversión' };
                     return dict[t] || t;
-                },
-                isInvestment(t) {
-                     // Detectar si una transacción antigua era inversión
-                     const c = (t.category || '').toLowerCase();
-                     return t.type === 'investment' || c.includes('etf') || c.includes('inversión');
                 },
                 formatMoney(n) { return new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(n); }
             }
