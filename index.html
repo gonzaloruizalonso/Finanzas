@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Financial Intelligence</title>
+    <title>Gonzalo Finance OS</title>
     
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
@@ -12,155 +12,220 @@
     <script src="https://unpkg.com/lucide@latest"></script>
 
     <style>
-        body { background-color: #0f172a; color: #cbd5e1; font-family: system-ui, -apple-system, sans-serif; }
-        .glass { background: #1e293b; border: 1px solid #334155; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3); border-radius: 12px; }
-        .stat-card { background: linear-gradient(145deg, #1e293b, #0f172a); border: 1px solid #334155; }
+        /* ESTÉTICA CYBERPUNK / FINTECH */
+        body { background-color: #0b0f19; color: #cbd5e1; font-family: 'Segoe UI', system-ui, sans-serif; }
         
-        /* Personalización del Tooltip del Gráfico */
-        #chartjs-tooltip { opacity: 1; position: absolute; background: rgba(0, 0, 0, 0.8); color: white; border-radius: 4px; pointer-events: none; transition: all .1s ease; transform: translate(-50%, 0); padding: 10px; z-index: 100; border: 1px solid #475569; }
+        .glass { 
+            background: rgba(30, 41, 59, 0.4); 
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(148, 163, 184, 0.1); 
+            border-radius: 16px; 
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+        }
+        
+        .card-hover:hover {
+            transform: translateY(-2px);
+            border-color: rgba(56, 189, 248, 0.3);
+            transition: all 0.3s ease;
+        }
+
+        .gradient-text {
+            background: linear-gradient(to right, #38bdf8, #818cf8);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        /* Scrollbar invisible */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+        ::-webkit-scrollbar-track { background: transparent; }
     </style>
 </head>
-<body class="p-2 md:p-6 pb-20 max-w-5xl mx-auto">
+<body class="p-2 md:p-6 pb-24 max-w-7xl mx-auto selection:bg-blue-500 selection:text-white">
 
-    <div x-data="dashboard()" x-init="init()" class="space-y-6">
+    <div x-data="financeOS()" x-init="init()" class="space-y-6">
 
-        <header class="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
-            <div>
-                <h1 class="text-2xl font-bold text-white tracking-tight">Panel de Control</h1>
-                <p class="text-xs text-gray-500">Visión Estratégica</p>
+        <header class="flex flex-col md:flex-row justify-between items-center gap-4 mb-8">
+            <div class="flex items-center gap-3">
+                <div class="bg-blue-600/20 p-3 rounded-xl border border-blue-500/30">
+                    <i data-lucide="activity" class="text-blue-400 w-6 h-6"></i>
+                </div>
+                <div>
+                    <h1 class="text-2xl font-bold text-white tracking-tight">Gonzalo <span class="gradient-text">Finance OS</span></h1>
+                    <p class="text-xs text-gray-500 font-mono" x-text="'Última sincro: ' + new Date().toLocaleTimeString()"></p>
+                </div>
             </div>
             
-            <div class="flex bg-gray-800 p-1 rounded-lg border border-gray-700">
-                <button @click="filterAccount = 'all'; renderMainChart()" 
-                        :class="filterAccount === 'all' ? 'bg-gray-600 text-white' : 'text-gray-400 hover:text-white'" 
-                        class="px-3 py-1 rounded text-xs font-medium transition">Global</button>
-                <template x-for="acc in accounts" :key="acc.id">
-                    <button @click="filterAccount = acc.id; renderMainChart()" 
-                            :class="filterAccount === acc.id ? 'bg-blue-600 text-white' : 'text-gray-400 hover:text-white'" 
-                            class="px-3 py-1 rounded text-xs font-medium transition" x-text="acc.name"></button>
-                </template>
-            </div>
+            <button @click="showAddModal = true" class="group bg-blue-600 hover:bg-blue-500 text-white px-6 py-3 rounded-xl font-bold shadow-lg shadow-blue-900/40 flex items-center gap-2 transition-all hover:scale-105">
+                <i data-lucide="plus" class="w-5 h-5 group-hover:rotate-90 transition-transform"></i>
+                <span>Añadir Movimiento</span>
+            </button>
         </header>
 
         <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div class="stat-card p-4 rounded-xl">
-                <div class="text-xs text-gray-500 uppercase">Patrimonio Neto</div>
-                <div class="text-2xl font-mono font-bold text-white" x-text="formatMoney(kpi.totalBalance)"></div>
+            <div class="glass p-5 card-hover">
+                <div class="flex justify-between items-start mb-2">
+                    <span class="text-xs text-gray-400 uppercase font-bold tracking-wider">Patrimonio Neto</span>
+                    <i data-lucide="wallet" class="w-4 h-4 text-emerald-400"></i>
+                </div>
+                <div class="text-3xl font-mono font-bold text-white" x-text="formatMoney(kpi.totalBalance)"></div>
+                <div class="text-xs text-emerald-400 mt-1 flex items-center gap-1">
+                    <i data-lucide="trending-up" class="w-3 h-3"></i> Total Global
+                </div>
             </div>
-            <div class="stat-card p-4 rounded-xl">
-                <div class="text-xs text-gray-500 uppercase">Inversión Total</div>
-                <div class="text-2xl font-mono font-bold text-blue-400" x-text="formatMoney(kpi.totalInvested)"></div>
+
+            <div class="glass p-5 card-hover relative overflow-hidden">
+                <div class="absolute right-0 top-0 p-4 opacity-5">
+                    <i data-lucide="bar-chart-2" class="w-24 h-24"></i>
+                </div>
+                <div class="flex justify-between items-start mb-2">
+                    <span class="text-xs text-gray-400 uppercase font-bold tracking-wider">Inversión (ETF)</span>
+                    <i data-lucide="pie-chart" class="w-4 h-4 text-purple-400"></i>
+                </div>
+                <div class="text-3xl font-mono font-bold text-purple-400" x-text="formatMoney(kpi.totalInvested)"></div>
+                <div class="text-xs text-gray-500 mt-1">Acumulado en Trade Rep.</div>
             </div>
-            <div class="stat-card p-4 rounded-xl border-l-2 border-emerald-500">
-                <div class="text-xs text-gray-500 uppercase">Ingresos (Año)</div>
-                <div class="text-xl font-mono text-emerald-400" x-text="formatMoney(kpi.yearIncome)"></div>
+
+            <div class="glass p-5 card-hover">
+                <div class="flex justify-between items-start mb-2">
+                    <span class="text-xs text-gray-400 uppercase font-bold tracking-wider">Ahorro Este Mes</span>
+                    <i data-lucide="piggy-bank" class="w-4 h-4 text-blue-400"></i>
+                </div>
+                <div class="text-3xl font-mono font-bold" :class="kpi.monthSavings >= 0 ? 'text-blue-400' : 'text-red-400'" x-text="formatMoney(kpi.monthSavings)"></div>
+                <div class="text-xs text-gray-500 mt-1">Ingresos - Gastos</div>
             </div>
-            <div class="stat-card p-4 rounded-xl border-l-2 border-red-500">
-                <div class="text-xs text-gray-500 uppercase">Gastos (Año)</div>
-                <div class="text-xl font-mono text-red-400" x-text="formatMoney(kpi.yearExpense)"></div>
+
+            <div class="glass p-5 card-hover">
+                <div class="flex justify-between items-start mb-2">
+                    <span class="text-xs text-gray-400 uppercase font-bold tracking-wider">Gastos Este Mes</span>
+                    <i data-lucide="flame" class="w-4 h-4 text-red-400"></i>
+                </div>
+                <div class="text-3xl font-mono font-bold text-red-400" x-text="formatMoney(kpi.monthExpenses)"></div>
+                <div class="text-xs text-gray-500 mt-1">Salidas de caja</div>
             </div>
         </div>
 
-        <div class="glass p-4 md:p-6 relative">
-            <div class="flex justify-between items-center mb-4">
-                <h3 class="font-bold text-lg text-white">Flujo de Caja & Inversión</h3>
-                <span class="text-xs text-blue-300 bg-blue-900/30 px-2 py-1 rounded border border-blue-800">
-                    <i data-lucide="mouse-pointer-click" class="inline w-3 h-3 mr-1"></i> Haz clic en una barra
-                </span>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 h-auto">
+            
+            <div class="glass p-6 md:col-span-2 flex flex-col h-96">
+                <h3 class="font-bold text-lg mb-4 flex items-center gap-2">
+                    <i data-lucide="activity" class="text-blue-400 w-5 h-5"></i> Evolución Financiera
+                </h3>
+                <div class="flex-1 relative w-full h-full">
+                    <canvas id="mainChart"></canvas>
+                </div>
             </div>
-            <div class="h-72 w-full">
-                <canvas id="mainChart"></canvas>
+
+            <div class="glass p-6 flex flex-col h-96">
+                <h3 class="font-bold text-lg mb-4 flex items-center gap-2">
+                    <i data-lucide="layers" class="text-emerald-400 w-5 h-5"></i> Distribución
+                </h3>
+                <div class="flex-1 relative flex justify-center">
+                    <canvas id="distributionChart"></canvas>
+                </div>
+                <div class="mt-4 space-y-2">
+                    <template x-for="acc in accounts" :key="acc.id">
+                        <div class="flex justify-between text-xs">
+                            <span x-text="acc.name" class="text-gray-400"></span>
+                            <span x-text="formatMoney(acc.current_balance)" class="font-mono text-white"></span>
+                        </div>
+                    </template>
+                </div>
+            </div>
+
+            <div class="glass p-6 h-80">
+                <h3 class="font-bold text-lg mb-2 flex items-center gap-2">
+                    <i data-lucide="radar" class="text-purple-400 w-5 h-5"></i> Radar de Gastos
+                </h3>
+                <div class="h-full relative pb-6">
+                    <canvas id="radarChart"></canvas>
+                </div>
+            </div>
+
+            <div class="glass p-6 md:col-span-2 h-80">
+                <h3 class="font-bold text-lg mb-2 flex items-center gap-2">
+                    <i data-lucide="trending-up" class="text-green-400 w-5 h-5"></i> Crecimiento del Patrimonio
+                </h3>
+                <div class="h-full relative pb-6">
+                    <canvas id="wealthChart"></canvas>
+                </div>
             </div>
         </div>
 
-        <div x-show="selectedMonthData" x-transition.opacity.duration.500ms class="space-y-4">
-            <div class="flex items-center gap-2">
-                <div class="h-px bg-gray-700 flex-1"></div>
-                <span class="text-sm font-bold text-blue-400 uppercase tracking-widest" x-text="selectedMonthLabel"></span>
-                <div class="h-px bg-gray-700 flex-1"></div>
+        <div class="glass p-6">
+            <h3 class="font-bold text-lg mb-4 text-gray-400 uppercase tracking-widest text-xs">Últimos Movimientos</h3>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left text-sm whitespace-nowrap">
+                    <thead class="text-xs text-gray-500 uppercase bg-gray-800/50 border-b border-gray-700">
+                        <tr>
+                            <th class="p-4 rounded-tl-lg">Fecha</th>
+                            <th class="p-4">Concepto</th>
+                            <th class="p-4">Cuenta</th>
+                            <th class="p-4 text-right rounded-tr-lg">Importe</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-800">
+                        <template x-for="tx in transactions.slice(0, 10)" :key="tx.id">
+                            <tr class="hover:bg-white/5 transition">
+                                <td class="p-4 font-mono text-gray-400" x-text="formatDate(tx.date)"></td>
+                                <td class="p-4 font-medium text-white">
+                                    <div x-text="tx.category"></div>
+                                </td>
+                                <td class="p-4">
+                                    <span class="px-2 py-1 rounded text-xs bg-gray-800 text-gray-300 border border-gray-700" x-text="getAccountName(tx.account_id)"></span>
+                                </td>
+                                <td class="p-4 text-right font-mono font-bold" 
+                                    :class="tx.amount > 0 ? 'text-emerald-400' : 'text-white'"
+                                    x-text="formatMoney(tx.amount)">
+                                </td>
+                            </tr>
+                        </template>
+                    </tbody>
+                </table>
             </div>
+        </div>
 
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div class="glass p-5">
-                    <h4 class="text-xs font-bold text-gray-400 mb-4 uppercase">Desglose de Gastos</h4>
-                    <div class="h-48 relative">
-                        <canvas id="monthDonut"></canvas>
-                        <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
-                            <span class="text-xs text-gray-500 font-mono">Gastos</span>
+        <div x-show="showAddModal" class="fixed inset-0 bg-black/90 backdrop-blur-sm z-50 flex items-center justify-center p-4" x-transition style="display: none;">
+            <div class="bg-gray-900 border border-gray-700 w-full max-w-lg rounded-2xl p-6 shadow-2xl relative">
+                <button @click="showAddModal = false" class="absolute top-4 right-4 text-gray-500 hover:text-white"><i data-lucide="x"></i></button>
+                
+                <h2 class="text-xl font-bold mb-6 text-white">Registrar Actividad</h2>
+                
+                <div class="space-y-4">
+                    <div class="grid grid-cols-3 gap-2">
+                        <button @click="newTx.type='expense'" :class="newTx.type==='expense' ? 'bg-red-500 text-white ring-2 ring-red-300' : 'bg-gray-800 text-gray-400'" class="p-3 rounded-lg font-bold text-sm transition">Gasto</button>
+                        <button @click="newTx.type='income'" :class="newTx.type==='income' ? 'bg-emerald-500 text-white ring-2 ring-emerald-300' : 'bg-gray-800 text-gray-400'" class="p-3 rounded-lg font-bold text-sm transition">Ingreso</button>
+                        <button @click="newTx.type='investment'" :class="newTx.type==='investment' ? 'bg-purple-500 text-white ring-2 ring-purple-300' : 'bg-gray-800 text-gray-400'" class="p-3 rounded-lg font-bold text-sm transition">Inversión</button>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="space-y-1">
+                            <label class="text-xs text-gray-500">Fecha</label>
+                            <input type="date" x-model="newTx.date" class="w-full bg-gray-800 border border-gray-700 rounded-lg p-3 text-white focus:border-blue-500 outline-none">
+                        </div>
+                        <div class="space-y-1">
+                            <label class="text-xs text-gray-500">Cantidad</label>
+                            <input type="number" x-model="newTx.amount" placeholder="0.00" class="w-full bg-gray-800 border border-gray-700 rounded-lg p-3 text-white focus:border-blue-500 outline-none font-mono text-lg">
                         </div>
                     </div>
-                </div>
 
-                <div class="glass p-0 overflow-hidden col-span-1 md:col-span-2">
-                    <div class="bg-gray-800/50 p-3 border-b border-gray-700 flex justify-between items-center">
-                        <h4 class="text-xs font-bold text-gray-400 uppercase">Movimientos del Mes</h4>
-                        <span class="text-xs text-gray-500" x-text="selectedMonthData?.transactions.length + ' movimientos'"></span>
+                    <div class="space-y-1">
+                        <label class="text-xs text-gray-500">Cuenta</label>
+                        <select x-model="newTx.account_id" class="w-full bg-gray-800 border border-gray-700 rounded-lg p-3 text-white focus:border-blue-500 outline-none">
+                            <template x-for="acc in accounts" :key="acc.id">
+                                <option :value="acc.id" x-text="acc.name"></option>
+                            </template>
+                        </select>
                     </div>
-                    <div class="max-h-56 overflow-y-auto">
-                        <table class="w-full text-sm text-left">
-                            <thead class="text-xs text-gray-500 bg-gray-800 sticky top-0">
-                                <tr>
-                                    <th class="p-3">Día</th>
-                                    <th class="p-3">Concepto</th>
-                                    <th class="p-3">Cuenta</th>
-                                    <th class="p-3 text-right">Importe</th>
-                                </tr>
-                            </thead>
-                            <tbody class="divide-y divide-gray-700">
-                                <template x-for="tx in selectedMonthData?.transactions" :key="tx.id">
-                                    <tr class="hover:bg-gray-800/50 transition">
-                                        <td class="p-3 font-mono text-gray-400" x-text="new Date(tx.date).getDate()"></td>
-                                        <td class="p-3 font-medium text-white">
-                                            <div x-text="tx.category"></div>
-                                        </td>
-                                        <td class="p-3 text-xs text-gray-500" x-text="getAccountName(tx.account_id)"></td>
-                                        <td class="p-3 text-right font-mono font-bold" 
-                                            :class="{
-                                                'text-emerald-400': tx.amount > 0,
-                                                'text-red-400': tx.amount < 0 && !isInvestment(tx),
-                                                'text-blue-400': isInvestment(tx)
-                                            }"
-                                            x-text="formatMoney(tx.amount)">
-                                        </td>
-                                    </tr>
-                                </template>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-        </div>
 
-        <div class="fixed bottom-6 right-6">
-            <button @click="showAddModal = true" class="bg-blue-600 hover:bg-blue-500 text-white rounded-full p-4 shadow-lg shadow-blue-900/50 transition hover:scale-110">
-                <i data-lucide="plus" class="w-6 h-6"></i>
-            </button>
-        </div>
-
-        <div x-show="showAddModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4" x-transition style="display: none;">
-            <div class="bg-gray-900 border border-gray-700 w-full max-w-md rounded-2xl p-6 shadow-2xl">
-                <h2 class="text-xl font-bold mb-4">Nuevo Movimiento</h2>
-                <div class="space-y-4">
-                    <div class="flex gap-2 bg-gray-800 p-1 rounded-lg">
-                        <button @click="newTx.type = 'expense'" :class="newTx.type === 'expense' ? 'bg-red-600 text-white shadow' : 'text-gray-400'" class="flex-1 py-2 rounded-md text-sm font-bold transition">Gasto</button>
-                        <button @click="newTx.type = 'income'" :class="newTx.type === 'income' ? 'bg-emerald-600 text-white shadow' : 'text-gray-400'" class="flex-1 py-2 rounded-md text-sm font-bold transition">Ingreso</button>
-                        <button @click="newTx.type = 'investment'" :class="newTx.type === 'investment' ? 'bg-blue-600 text-white shadow' : 'text-gray-400'" class="flex-1 py-2 rounded-md text-sm font-bold transition">Inversión</button>
+                    <div class="space-y-1">
+                        <label class="text-xs text-gray-500">Concepto</label>
+                        <input type="text" x-model="newTx.category" placeholder="Ej: Netflix, Nómina, ETF S&P500..." class="w-full bg-gray-800 border border-gray-700 rounded-lg p-3 text-white focus:border-blue-500 outline-none">
                     </div>
-                    
-                    <input type="number" x-model="newTx.amount" placeholder="Cantidad (Ej: 50)" class="w-full bg-gray-800 border border-gray-700 rounded-lg p-3 text-white focus:border-blue-500 outline-none">
-                    <input type="text" x-model="newTx.category" placeholder="Concepto (Ej: Supermercado)" class="w-full bg-gray-800 border border-gray-700 rounded-lg p-3 text-white focus:border-blue-500 outline-none">
-                    <input type="date" x-model="newTx.date" class="w-full bg-gray-800 border border-gray-700 rounded-lg p-3 text-white">
-                    
-                    <select x-model="newTx.account_id" class="w-full bg-gray-800 border border-gray-700 rounded-lg p-3 text-white">
-                        <template x-for="acc in accounts" :key="acc.id">
-                            <option :value="acc.id" x-text="acc.name"></option>
-                        </template>
-                    </select>
 
-                    <div class="flex gap-3 pt-2">
-                        <button @click="showAddModal = false" class="flex-1 py-3 text-gray-400 hover:text-white transition">Cancelar</button>
-                        <button @click="addTransaction()" class="flex-1 py-3 bg-white text-black font-bold rounded-lg hover:bg-gray-200 transition">Guardar</button>
-                    </div>
+                    <button @click="addTransaction()" class="w-full py-4 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-xl font-bold text-white shadow-lg shadow-blue-900/50 hover:shadow-blue-900/80 transition mt-2">
+                        Guardar Movimiento
+                    </button>
                 </div>
             </div>
         </div>
@@ -169,31 +234,26 @@
 
     <script>
         // ==========================================
-        // ⬇️ TUS CLAVES AQUÍ ⬇️
+        // ⬇️ PEGA AQUÍ TUS CLAVES DE SUPABASE ⬇️
         const SUPABASE_URL = 'https://pfohhjmeomixhzktwggl.supabase.co'; 
         const SUPABASE_KEY = 'sb_publishable_t8scoBrGD4XNEozDZD3ZrA_XCl1kRaE';
         // ==========================================
 
         const { createClient } = supabase;
         const db = createClient(SUPABASE_URL, SUPABASE_KEY);
-        let mainChartInstance = null;
-        let monthDonutInstance = null;
+        
+        // Colores del sistema
+        const colors = {
+            green: '#10b981', red: '#ef4444', blue: '#3b82f6', purple: '#a855f7', 
+            slate: '#64748b', bg: '#0b0f19'
+        };
 
-        function dashboard() {
+        function financeOS() {
             return {
+                showAddModal: false,
                 accounts: [],
                 transactions: [],
-                filterAccount: 'all', // 'all' o ID de cuenta
-                showAddModal: false,
-                
-                // Estado del Drill-Down (Click en gráfica)
-                selectedMonthLabel: '',
-                selectedMonthData: null,
-
-                // KPI
-                kpi: { totalBalance: 0, totalInvested: 0, yearIncome: 0, yearExpense: 0 },
-                
-                // Formulario
+                kpi: { totalBalance: 0, totalInvested: 0, monthSavings: 0, monthExpenses: 0 },
                 newTx: { type: 'expense', amount: '', category: '', date: new Date().toISOString().split('T')[0], account_id: '' },
 
                 async init() {
@@ -202,261 +262,226 @@
                 },
 
                 async loadData() {
-                    // Cargar datos brutos
+                    // Carga paralela
                     const [accs, txs] = await Promise.all([
-                        db.from('accounts').select('*'),
-                        db.from('transactions').select('*').order('date', {ascending: true}) // Orden cronológico para gráficas
+                        db.from('accounts').select('*').order('name'),
+                        db.from('transactions').select('*').order('date', {ascending: true}) // Orden cronológico vital para gráficas
                     ]);
 
                     this.accounts = accs.data || [];
-                    const allTransactions = txs.data || [];
+                    this.transactions = txs.data || [];
                     
-                    // Si hay filtro, filtramos transacciones visualmente, pero mantenemos saldo total real
-                    this.transactions = allTransactions; // Guardamos todas para cálculos globales
+                    // Cálculo de Saldos Totales
+                    let globalBalance = 0;
+                    this.accounts = this.accounts.map(acc => {
+                        const accTxs = this.transactions.filter(t => t.account_id === acc.id);
+                        const sum = accTxs.reduce((a, b) => a + Number(b.amount), 0);
+                        const total = (Number(acc.initial_balance) || 0) + sum;
+                        globalBalance += total;
+                        return { ...acc, current_balance: total };
+                    });
+                    
+                    this.kpi.totalBalance = globalBalance;
+                    this.calculateMonthKPIs();
+                    this.renderCharts();
 
-                    // Calcular KPIs Globales
-                    this.calculateKPIs(allTransactions);
-                    
-                    // Renderizar Gráfica Principal
-                    this.renderMainChart();
-                    
-                    // Set default account for form
-                    if(this.accounts.length) this.newTx.account_id = this.accounts[0].id;
+                    // Pre-seleccionar cuenta
+                    if(this.accounts.length && !this.newTx.account_id) this.newTx.account_id = this.accounts[0].id;
                 },
 
-                calculateKPIs(txs) {
-                    // 1. Saldos
-                    let balance = 0;
-                    this.accounts.forEach(acc => {
-                        const accTxs = txs.filter(t => t.account_id === acc.id);
-                        const sum = accTxs.reduce((a, b) => a + Number(b.amount), 0);
-                        balance += (Number(acc.initial_balance) || 0) + sum;
-                    });
-                    this.kpi.totalBalance = balance;
+                calculateMonthKPIs() {
+                    const now = new Date();
+                    const currentMonth = now.getMonth();
+                    const currentYear = now.getFullYear();
+                    
+                    let income = 0;
+                    let expense = 0;
+                    let invested = 0;
 
-                    // 2. Inversiones y Flujos Anuales
-                    const currentYear = new Date().getFullYear();
-                    this.kpi.totalInvested = 0;
-                    this.kpi.yearIncome = 0;
-                    this.kpi.yearExpense = 0;
-
-                    txs.forEach(t => {
+                    this.transactions.forEach(t => {
+                        const d = new Date(t.date); // Aquí puede ser el error si fecha es invalida, pero supabase suele mandar ISO
                         const amount = Number(t.amount);
                         const isInv = this.isInvestment(t);
-                        const year = new Date(t.date).getFullYear();
 
-                        if (isInv) this.kpi.totalInvested += Math.abs(amount);
-                        
-                        if (year === currentYear) {
-                            if (amount > 0) this.kpi.yearIncome += amount;
-                            else if (!isInv) this.kpi.yearExpense += Math.abs(amount);
+                        // Total Invertido (Histórico)
+                        if(isInv) this.kpi.totalInvested += Math.abs(amount);
+
+                        // Métricas del Mes Actual
+                        if(d.getMonth() === currentMonth && d.getFullYear() === currentYear) {
+                            if(amount > 0) income += amount;
+                            else if(!isInv) expense += Math.abs(amount);
                         }
                     });
+
+                    this.kpi.monthExpenses = expense;
+                    this.kpi.monthSavings = income - expense;
                 },
 
-                // Lógica de Agrupación por Mes para la Gráfica
-                processMonthlyData() {
-                    const groups = {};
-                    
-                    // Filtrar por cuenta si es necesario
-                    const filteredTxs = this.filterAccount === 'all' 
-                        ? this.transactions 
-                        : this.transactions.filter(t => t.account_id === this.filterAccount);
+                renderCharts() {
+                    // Destruir anteriores si existen (limpieza)
+                    Chart.helpers.each(Chart.instances, (instance) => { instance.destroy(); });
 
-                    filteredTxs.forEach(t => {
-                        const date = new Date(t.date);
-                        const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`; // YYYY-MM
-                        
-                        if (!groups[key]) groups[key] = { income: 0, expense: 0, investment: 0, breakdown: {}, transactions: [] };
-                        
-                        groups[key].transactions.push(t); // Guardamos la tx para el detalle
+                    // Preparar datos agrupados por mes (YYYY-MM)
+                    const months = {};
+                    const categories = {};
+                    let wealthAccumulated = this.accounts.reduce((sum, a) => sum + (Number(a.initial_balance)||0), 0); // Base inicial aproximada
+                    const wealthData = [];
 
+                    this.transactions.forEach(t => {
+                        const dateStr = t.date.substring(0, 7); // "2023-11" -> MÁS SEGURO QUE NEW DATE()
                         const amount = Number(t.amount);
-                        if (amount > 0) {
-                            groups[key].income += amount;
-                        } else {
-                            if (this.isInvestment(t)) {
-                                groups[key].investment += Math.abs(amount);
-                            } else {
-                                groups[key].expense += Math.abs(amount);
-                                // Desglose para el tooltip
-                                if (!groups[key].breakdown[t.category]) groups[key].breakdown[t.category] = 0;
-                                groups[key].breakdown[t.category] += Math.abs(amount);
-                            }
+                        
+                        // Datos para Línea Temporal
+                        if(!months[dateStr]) months[dateStr] = { income: 0, expense: 0, invest: 0 };
+                        if(amount > 0) months[dateStr].income += amount;
+                        else if(this.isInvestment(t)) months[dateStr].invest += Math.abs(amount);
+                        else {
+                            months[dateStr].expense += Math.abs(amount);
+                            // Datos para Radar (Categorías)
+                            const cat = t.category || 'Otros';
+                            if(!categories[cat]) categories[cat] = 0;
+                            categories[cat] += Math.abs(amount);
                         }
+
+                        // Datos para Patrimonio (Acumulativo simplificado)
+                        wealthAccumulated += amount;
+                        wealthData.push({ x: t.date, y: wealthAccumulated });
                     });
 
-                    // Ordenar claves (meses)
-                    return Object.keys(groups).sort().map(key => ({
-                        month: key,
-                        label: new Date(key + '-01').toLocaleDateString('es-ES', { month: 'short', year: '2-digit' }),
-                        ...groups[key]
-                    }));
-                },
+                    const labels = Object.keys(months).sort(); // Ordenar meses cronológicamente
+                    // Cortar a los últimos 6 meses para que se vea bien
+                    const recentLabels = labels.slice(-6); 
 
-                renderMainChart() {
-                    const ctx = document.getElementById('mainChart').getContext('2d');
-                    if (mainChartInstance) mainChartInstance.destroy();
-
-                    const data = this.processMonthlyData();
-                    // Limitar a los últimos 12 meses para que no se vea minúsculo
-                    const last12 = data.slice(-12);
-
-                    mainChartInstance = new Chart(ctx, {
+                    // 1. GRÁFICO PRINCIPAL (Barras Agrupadas)
+                    new Chart(document.getElementById('mainChart'), {
                         type: 'bar',
                         data: {
-                            labels: last12.map(d => d.label),
+                            labels: recentLabels,
                             datasets: [
-                                {
-                                    label: 'Ingresos',
-                                    data: last12.map(d => d.income),
-                                    backgroundColor: '#10b981', // Verde
-                                    borderRadius: 4,
-                                    stack: 'Stack 0',
-                                },
-                                {
-                                    label: 'Inversión',
-                                    data: last12.map(d => d.investment),
-                                    backgroundColor: '#3b82f6', // Azul
-                                    borderRadius: 4,
-                                    stack: 'Stack 1',
-                                },
-                                {
-                                    label: 'Gastos',
-                                    data: last12.map(d => d.expense),
-                                    backgroundColor: '#ef4444', // Rojo
-                                    borderRadius: 4,
-                                    stack: 'Stack 1', // Apilado con inversión para ver "salidas totales"
-                                }
+                                { label: 'Ingresos', data: recentLabels.map(l => months[l].income), backgroundColor: colors.green, borderRadius: 4 },
+                                { label: 'Gastos', data: recentLabels.map(l => months[l].expense), backgroundColor: colors.red, borderRadius: 4 },
+                                { label: 'Inversión', data: recentLabels.map(l => months[l].invest), backgroundColor: colors.purple, borderRadius: 4 }
                             ]
                         },
                         options: {
-                            responsive: true,
-                            maintainAspectRatio: false,
-                            interaction: { mode: 'index', intersect: false }, // Crucial para hover
-                            onClick: (e, elements) => {
-                                if (elements.length > 0) {
-                                    const index = elements[0].index;
-                                    this.openMonthDetail(last12[index]);
-                                }
+                            responsive: true, maintainAspectRatio: false,
+                            scales: { 
+                                y: { grid: { color: '#1e293b' }, ticks: { color: colors.slate } },
+                                x: { grid: { display: false }, ticks: { color: colors.slate } }
                             },
-                            plugins: {
-                                tooltip: {
-                                    callbacks: {
-                                        // AQUÍ ESTÁ LA MAGIA DEL HOVER DESGLOSADO
-                                        afterBody: (context) => {
-                                            const index = context[0].dataIndex;
-                                            const monthData = last12[index];
-                                            
-                                            // Solo mostramos desglose si estamos sobre la barra de gastos
-                                            // Buscamos si el tooltip incluye el dataset de gastos (index 2)
-                                            const hasExpense = context.find(c => c.datasetIndex === 2);
-                                            
-                                            if (hasExpense && monthData.expense > 0) {
-                                                const breakdown = monthData.breakdown;
-                                                // Ordenar por cantidad
-                                                const sorted = Object.entries(breakdown).sort((a,b) => b[1] - a[1]);
-                                                
-                                                let lines = ['--- TOP GASTOS ---'];
-                                                sorted.slice(0, 5).forEach(([cat, val]) => { // Top 5
-                                                    const pct = Math.round((val / monthData.expense) * 100);
-                                                    lines.push(`${cat}: ${pct}% (${Math.round(val)}€)`);
-                                                });
-                                                return lines;
-                                            }
-                                        }
-                                    },
-                                    backgroundColor: 'rgba(15, 23, 42, 0.9)',
-                                    borderColor: '#334155',
-                                    borderWidth: 1
+                            plugins: { legend: { labels: { color: 'white' } } }
+                        }
+                    });
+
+                    // 2. DISTRIBUCIÓN (Doughnut)
+                    new Chart(document.getElementById('distributionChart'), {
+                        type: 'doughnut',
+                        data: {
+                            labels: this.accounts.map(a => a.name),
+                            datasets: [{
+                                data: this.accounts.map(a => a.current_balance),
+                                backgroundColor: [colors.blue, colors.purple, colors.green],
+                                borderWidth: 0
+                            }]
+                        },
+                        options: { cutout: '70%', plugins: { legend: { position: 'bottom', labels: { color: 'white' } } } }
+                    });
+
+                    // 3. RADAR DE GASTOS
+                    const topCats = Object.entries(categories).sort((a,b) => b[1]-a[1]).slice(0, 5); // Top 5
+                    new Chart(document.getElementById('radarChart'), {
+                        type: 'radar',
+                        data: {
+                            labels: topCats.map(c => c[0]),
+                            datasets: [{
+                                label: 'Gastos por Categoría',
+                                data: topCats.map(c => c[1]),
+                                borderColor: colors.purple,
+                                backgroundColor: 'rgba(168, 85, 247, 0.2)',
+                                pointBackgroundColor: colors.purple
+                            }]
+                        },
+                        options: {
+                            responsive: true, maintainAspectRatio: false,
+                            scales: { r: { grid: { color: '#334155' }, ticks: { display: false }, pointLabels: { color: 'white' } } },
+                            plugins: { legend: { display: false } }
+                        }
+                    });
+
+                    // 4. EVOLUCIÓN PATRIMONIO (Line Area)
+                    // Simplificamos wealthData para el gráfico (tomamos el saldo al final de cada mes para no saturar)
+                    const wealthByMonth = recentLabels.map(m => {
+                        // Buscar el último valor acumulado de ese mes
+                        // Esto es una aproximación visual
+                        let bal = 0;
+                        let found = false;
+                        // Recalcular saldo hasta ese mes
+                        this.transactions.forEach(t => {
+                            if(t.date.substring(0,7) <= m) bal += Number(t.amount);
+                        });
+                        // Sumar saldos iniciales
+                        const initials = this.accounts.reduce((s,a) => s + (Number(a.initial_balance)||0),0);
+                        return initials + bal;
+                    });
+
+                    new Chart(document.getElementById('wealthChart'), {
+                        type: 'line',
+                        data: {
+                            labels: recentLabels,
+                            datasets: [{
+                                label: 'Patrimonio Total',
+                                data: wealthByMonth,
+                                borderColor: colors.blue,
+                                backgroundColor: (ctx) => {
+                                    const gradient = ctx.chart.ctx.createLinearGradient(0, 0, 0, 300);
+                                    gradient.addColorStop(0, 'rgba(59, 130, 246, 0.5)');
+                                    gradient.addColorStop(1, 'rgba(59, 130, 246, 0)');
+                                    return gradient;
                                 },
-                                legend: { labels: { color: '#94a3b8' } }
+                                fill: true, tension: 0.4
+                            }]
+                        },
+                        options: {
+                            responsive: true, maintainAspectRatio: false,
+                            scales: { 
+                                y: { grid: { color: '#1e293b' }, ticks: { color: colors.slate } },
+                                x: { grid: { display: false }, ticks: { color: colors.slate } }
                             },
-                            scales: {
-                                x: { ticks: { color: '#94a3b8' }, grid: { display: false } },
-                                y: { ticks: { color: '#94a3b8' }, grid: { color: '#334155' } }
-                            }
+                            plugins: { legend: { display: false } }
                         }
                     });
                 },
 
-                openMonthDetail(monthObj) {
-                    this.selectedMonthLabel = monthObj.label;
-                    // Ordenar transacciones del mes por fecha descendente
-                    monthObj.transactions.sort((a,b) => new Date(b.date) - new Date(a.date));
-                    this.selectedMonthData = monthObj;
-
-                    // Renderizar Donut
-                    setTimeout(() => {
-                        const ctx = document.getElementById('monthDonut');
-                        if (monthDonutInstance) monthDonutInstance.destroy();
-                        
-                        const bd = monthObj.breakdown;
-                        const labels = Object.keys(bd);
-                        const data = Object.values(bd);
-
-                        monthDonutInstance = new Chart(ctx, {
-                            type: 'doughnut',
-                            data: {
-                                labels: labels,
-                                datasets: [{
-                                    data: data,
-                                    backgroundColor: ['#f87171', '#fb923c', '#facc15', '#a3e635', '#22d3ee', '#818cf8', '#e879f9'],
-                                    borderWidth: 0
-                                }]
-                            },
-                            options: {
-                                responsive: true,
-                                maintainAspectRatio: false,
-                                plugins: { legend: { display: false } }
-                            }
-                        });
-                    }, 50);
-                    
-                    // Scroll suave hacia el detalle
-                    setTimeout(() => {
-                        document.getElementById('monthDonut').scrollIntoView({ behavior: 'smooth', block: 'center' });
-                    }, 100);
-                },
-
-                // --- UTILIDADES ---
-
+                // UTILS
                 async addTransaction() {
-                    if (!this.newTx.amount || !this.newTx.account_id) return alert("Faltan datos");
+                    if(!this.newTx.amount) return;
+                    let amount = Math.abs(Number(this.newTx.amount));
+                    if(this.newTx.type !== 'income') amount = -amount;
                     
-                    let finalAmount = Math.abs(Number(this.newTx.amount));
-                    if (this.newTx.type !== 'income') finalAmount = -finalAmount;
-
-                    let category = this.newTx.category;
-                    if (this.newTx.type === 'investment' && !category) category = 'Inversión ETF';
+                    // Categoría automática si es inversión
+                    let cat = this.newTx.category;
+                    if(this.newTx.type === 'investment' && !cat) cat = 'Inversión ETF';
 
                     const { error } = await db.from('transactions').insert([{
                         account_id: this.newTx.account_id,
-                        amount: finalAmount,
-                        category: category,
+                        amount: amount,
+                        category: cat,
                         date: this.newTx.date
                     }]);
 
-                    if (!error) {
+                    if(!error) {
                         this.showAddModal = false;
                         this.newTx.amount = ''; this.newTx.category = '';
-                        await this.loadData(); // Recargar todo
-                    } else {
-                        alert(error.message);
+                        this.loadData();
                     }
                 },
-
-                isInvestment(tx) {
-                    const cat = (tx.category || '').toLowerCase();
-                    return cat.includes('etf') || cat.includes('inversión') || cat.includes('trade republic') || cat.includes('bolsa');
+                isInvestment(t) {
+                    const c = (t.category || '').toLowerCase();
+                    return c.includes('etf') || c.includes('inversión') || c.includes('trade republic') || c.includes('bolsa');
                 },
-                getAccountName(id) {
-                    const acc = this.accounts.find(a => a.id === id);
-                    return acc ? acc.name : '...';
-                },
-                formatMoney(num) { 
-                    return new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(num); 
-                }
+                getAccountName(id) { const a = this.accounts.find(x => x.id === id); return a ? a.name : '...'; },
+                formatMoney(n) { return new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(n); },
+                formatDate(d) { return new Date(d).toLocaleDateString('es-ES', { day: '2-digit', month: 'short' }); }
             }
         }
     </script>
