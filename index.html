@@ -3,141 +3,165 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Planificador Financiero Pro</title>
+    <title>Financial Intelligence</title>
+    
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <script src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
+
     <style>
-        body { background-color: #0b0f19; color: #e2e8f0; font-family: sans-serif; }
-        .glass { background: #161e2e; border: 1px solid #2d3748; border-radius: 16px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
-        .input-dark { background: #0b0f19; border: 1px solid #2d3748; color: white; padding: 0.6rem; border-radius: 8px; width: 100%; transition: border-color 0.2s; }
-        .input-dark:focus { border-color: #3b82f6; outline: none; }
-        .btn { padding: 0.6rem 1rem; border-radius: 8px; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+        body { background-color: #0f172a; color: #cbd5e1; font-family: system-ui, -apple-system, sans-serif; }
+        .glass { background: #1e293b; border: 1px solid #334155; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3); border-radius: 12px; }
+        .stat-card { background: linear-gradient(145deg, #1e293b, #0f172a); border: 1px solid #334155; }
+        
+        /* Personalización del Tooltip del Gráfico */
+        #chartjs-tooltip { opacity: 1; position: absolute; background: rgba(0, 0, 0, 0.8); color: white; border-radius: 4px; pointer-events: none; transition: all .1s ease; transform: translate(-50%, 0); padding: 10px; z-index: 100; border: 1px solid #475569; }
     </style>
 </head>
-<body class="p-4 max-w-2xl mx-auto pb-32">
+<body class="p-2 md:p-6 pb-20 max-w-5xl mx-auto">
 
-    <div x-data="app()" x-init="init()">
-        
-        <header class="mb-6 flex justify-between items-end">
+    <div x-data="dashboard()" x-init="init()" class="space-y-6">
+
+        <header class="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
             <div>
-                <h1 class="text-sm text-gray-400 uppercase tracking-widest font-bold">Patrimonio Total</h1>
-                <div class="text-4xl font-bold text-white tracking-tight flex items-baseline gap-2">
-                    <span x-text="formatMoney(totalBalance)"></span>
-                    <span class="text-xs font-normal text-gray-500 bg-gray-800 px-2 py-1 rounded-full">Global</span>
-                </div>
+                <h1 class="text-2xl font-bold text-white tracking-tight">Panel de Control</h1>
+                <p class="text-xs text-gray-500">Visión Estratégica</p>
             </div>
-            <button @click="showConfig = !showConfig" class="text-gray-400 hover:text-white bg-gray-800 p-2 rounded-lg">
-                <i data-lucide="settings" class="w-5 h-5"></i>
-            </button>
+            
+            <div class="flex bg-gray-800 p-1 rounded-lg border border-gray-700">
+                <button @click="filterAccount = 'all'; renderMainChart()" 
+                        :class="filterAccount === 'all' ? 'bg-gray-600 text-white' : 'text-gray-400 hover:text-white'" 
+                        class="px-3 py-1 rounded text-xs font-medium transition">Global</button>
+                <template x-for="acc in accounts" :key="acc.id">
+                    <button @click="filterAccount = acc.id; renderMainChart()" 
+                            :class="filterAccount === acc.id ? 'bg-blue-600 text-white' : 'text-gray-400 hover:text-white'" 
+                            class="px-3 py-1 rounded text-xs font-medium transition" x-text="acc.name"></button>
+                </template>
+            </div>
         </header>
 
-        <div x-show="showConfig" class="mb-6 bg-gray-800 p-4 rounded-xl border border-gray-700" x-transition>
-            <h2 class="font-bold text-sm mb-3 text-blue-400">Ajuste de Saldos Iniciales</h2>
-            <template x-for="acc in accounts" :key="acc.id">
-                <div class="flex justify-between items-center mb-2 gap-2">
-                    <span x-text="acc.name" class="text-sm w-1/3"></span>
-                    <input type="number" x-model="acc.tempBalance" class="input-dark text-right">
-                    <button @click="updateBalance(acc)" class="p-2 bg-blue-600 rounded hover:bg-blue-500 text-white"><i data-lucide="save" class="w-4 h-4"></i></button>
-                </div>
-            </template>
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div class="stat-card p-4 rounded-xl">
+                <div class="text-xs text-gray-500 uppercase">Patrimonio Neto</div>
+                <div class="text-2xl font-mono font-bold text-white" x-text="formatMoney(kpi.totalBalance)"></div>
+            </div>
+            <div class="stat-card p-4 rounded-xl">
+                <div class="text-xs text-gray-500 uppercase">Inversión Total</div>
+                <div class="text-2xl font-mono font-bold text-blue-400" x-text="formatMoney(kpi.totalInvested)"></div>
+            </div>
+            <div class="stat-card p-4 rounded-xl border-l-2 border-emerald-500">
+                <div class="text-xs text-gray-500 uppercase">Ingresos (Año)</div>
+                <div class="text-xl font-mono text-emerald-400" x-text="formatMoney(kpi.yearIncome)"></div>
+            </div>
+            <div class="stat-card p-4 rounded-xl border-l-2 border-red-500">
+                <div class="text-xs text-gray-500 uppercase">Gastos (Año)</div>
+                <div class="text-xl font-mono text-red-400" x-text="formatMoney(kpi.yearExpense)"></div>
+            </div>
         </div>
 
-        <div class="grid grid-cols-2 gap-4 mb-8">
-            <template x-for="acc in accounts" :key="acc.id">
-                <div class="glass p-5 relative overflow-hidden group">
-                    <div class="absolute top-0 right-0 p-3 opacity-10 group-hover:opacity-20 transition">
-                        <i data-lucide="credit-card" class="w-12 h-12"></i>
-                    </div>
-                    <div class="text-xs text-gray-400 font-bold mb-1" x-text="acc.name"></div>
-                    <div class="text-2xl font-mono font-bold" 
-                         :class="acc.name.includes('ING') ? 'text-orange-400' : 'text-blue-400'"
-                         x-text="formatMoney(acc.current_balance)"></div>
-                </div>
-            </template>
-        </div>
-
-        <div class="glass p-5 mb-8">
+        <div class="glass p-4 md:p-6 relative">
             <div class="flex justify-between items-center mb-4">
-                <h3 class="font-bold text-sm flex items-center gap-2 text-purple-400">
-                    <i data-lucide="calendar-clock" class="w-4 h-4"></i> Proyección Gastos Fijos
-                </h3>
-                <span class="text-xs text-gray-500">Próximos 6 meses</span>
+                <h3 class="font-bold text-lg text-white">Flujo de Caja & Inversión</h3>
+                <span class="text-xs text-blue-300 bg-blue-900/30 px-2 py-1 rounded border border-blue-800">
+                    <i data-lucide="mouse-pointer-click" class="inline w-3 h-3 mr-1"></i> Haz clic en una barra
+                </span>
             </div>
-            <div class="h-48">
-                <canvas id="projectionChart"></canvas>
-            </div>
-            <p class="text-xs text-center text-gray-500 mt-2">
-                Esto muestra cuánto pagarás de fijo cada mes. Si un gasto vence, la barra baja.
-            </p>
-        </div>
-
-        <div class="glass p-5 mb-8 border-t-4" :class="isRecurring ? 'border-purple-500' : 'border-blue-500'">
-            <div class="flex justify-between items-center mb-4">
-                <h3 class="font-bold" x-text="isRecurring ? 'Nueva Regla Recurrente' : 'Nuevo Movimiento'"></h3>
-                
-                <label class="flex items-center cursor-pointer gap-2">
-                    <span class="text-xs text-gray-400">¿Es fijo mensual?</span>
-                    <div class="relative">
-                        <input type="checkbox" x-model="isRecurring" class="sr-only">
-                        <div class="block bg-gray-700 w-10 h-6 rounded-full"></div>
-                        <div class="dot absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition" :class="isRecurring ? 'translate-x-4 bg-purple-400' : ''"></div>
-                    </div>
-                </label>
-            </div>
-
-            <div class="space-y-3">
-                <div class="grid grid-cols-2 gap-3">
-                    <input type="text" x-model="newEntry.category" placeholder="Concepto (Ej: Coche, Cine)" class="input-dark">
-                    <input type="number" x-model="newEntry.amount" placeholder="Cantidad" class="input-dark">
-                </div>
-                
-                <select x-model="newEntry.account_id" class="input-dark">
-                    <template x-for="acc in accounts" :key="acc.id">
-                        <option :value="acc.id" x-text="acc.name"></option>
-                    </template>
-                </select>
-
-                <div x-show="isRecurring" class="bg-gray-800/50 p-3 rounded-lg grid grid-cols-2 gap-3 border border-gray-700" x-transition>
-                    <div>
-                        <label class="text-xs text-gray-500 mb-1 block">Día de cobro</label>
-                        <input type="number" x-model="newEntry.day" placeholder="Ej: 5" max="31" class="input-dark">
-                    </div>
-                    <div>
-                        <label class="text-xs text-gray-500 mb-1 block">Hasta cuándo (Opcional)</label>
-                        <input type="date" x-model="newEntry.end_date" class="input-dark text-gray-400">
-                    </div>
-                </div>
-                
-                <button @click="handleSubmit()" 
-                    class="w-full btn text-white mt-2 shadow-lg hover:shadow-xl"
-                    :class="isRecurring ? 'bg-purple-600 hover:bg-purple-500' : 'bg-blue-600 hover:bg-blue-500'">
-                    <span x-text="isRecurring ? 'Guardar Regla Fija' : 'Añadir Gasto Puntual'"></span>
-                </button>
+            <div class="h-72 w-full">
+                <canvas id="mainChart"></canvas>
             </div>
         </div>
 
-        <div class="mb-6" x-show="recurringList.length > 0">
-            <h3 class="text-xs text-gray-500 uppercase font-bold mb-3">Tus Gastos Fijos Activos</h3>
-            <div class="space-y-2">
-                <template x-for="rec in recurringList" :key="rec.id">
-                    <div class="glass p-3 flex justify-between items-center text-sm border-l-2 border-purple-500">
-                        <div>
-                            <div class="font-bold text-white" x-text="rec.name"></div>
-                            <div class="text-xs text-gray-500">
-                                Día <span x-text="rec.day_of_month"></span> | 
-                                <span x-show="rec.end_date">Hasta: <span x-text="formatDate(rec.end_date)"></span></span>
-                                <span x-show="!rec.end_date">Indefinido</span>
-                            </div>
-                        </div>
-                        <div class="flex items-center gap-3">
-                            <span class="font-mono text-purple-300" x-text="'-' + formatMoney(rec.amount)"></span>
-                            <button @click="deleteRecurring(rec.id)" class="text-red-400 hover:text-white"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+        <div x-show="selectedMonthData" x-transition.opacity.duration.500ms class="space-y-4">
+            <div class="flex items-center gap-2">
+                <div class="h-px bg-gray-700 flex-1"></div>
+                <span class="text-sm font-bold text-blue-400 uppercase tracking-widest" x-text="selectedMonthLabel"></span>
+                <div class="h-px bg-gray-700 flex-1"></div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div class="glass p-5">
+                    <h4 class="text-xs font-bold text-gray-400 mb-4 uppercase">Desglose de Gastos</h4>
+                    <div class="h-48 relative">
+                        <canvas id="monthDonut"></canvas>
+                        <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
+                            <span class="text-xs text-gray-500 font-mono">Gastos</span>
                         </div>
                     </div>
-                </template>
+                </div>
+
+                <div class="glass p-0 overflow-hidden col-span-1 md:col-span-2">
+                    <div class="bg-gray-800/50 p-3 border-b border-gray-700 flex justify-between items-center">
+                        <h4 class="text-xs font-bold text-gray-400 uppercase">Movimientos del Mes</h4>
+                        <span class="text-xs text-gray-500" x-text="selectedMonthData?.transactions.length + ' movimientos'"></span>
+                    </div>
+                    <div class="max-h-56 overflow-y-auto">
+                        <table class="w-full text-sm text-left">
+                            <thead class="text-xs text-gray-500 bg-gray-800 sticky top-0">
+                                <tr>
+                                    <th class="p-3">Día</th>
+                                    <th class="p-3">Concepto</th>
+                                    <th class="p-3">Cuenta</th>
+                                    <th class="p-3 text-right">Importe</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-700">
+                                <template x-for="tx in selectedMonthData?.transactions" :key="tx.id">
+                                    <tr class="hover:bg-gray-800/50 transition">
+                                        <td class="p-3 font-mono text-gray-400" x-text="new Date(tx.date).getDate()"></td>
+                                        <td class="p-3 font-medium text-white">
+                                            <div x-text="tx.category"></div>
+                                        </td>
+                                        <td class="p-3 text-xs text-gray-500" x-text="getAccountName(tx.account_id)"></td>
+                                        <td class="p-3 text-right font-mono font-bold" 
+                                            :class="{
+                                                'text-emerald-400': tx.amount > 0,
+                                                'text-red-400': tx.amount < 0 && !isInvestment(tx),
+                                                'text-blue-400': isInvestment(tx)
+                                            }"
+                                            x-text="formatMoney(tx.amount)">
+                                        </td>
+                                    </tr>
+                                </template>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="fixed bottom-6 right-6">
+            <button @click="showAddModal = true" class="bg-blue-600 hover:bg-blue-500 text-white rounded-full p-4 shadow-lg shadow-blue-900/50 transition hover:scale-110">
+                <i data-lucide="plus" class="w-6 h-6"></i>
+            </button>
+        </div>
+
+        <div x-show="showAddModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4" x-transition style="display: none;">
+            <div class="bg-gray-900 border border-gray-700 w-full max-w-md rounded-2xl p-6 shadow-2xl">
+                <h2 class="text-xl font-bold mb-4">Nuevo Movimiento</h2>
+                <div class="space-y-4">
+                    <div class="flex gap-2 bg-gray-800 p-1 rounded-lg">
+                        <button @click="newTx.type = 'expense'" :class="newTx.type === 'expense' ? 'bg-red-600 text-white shadow' : 'text-gray-400'" class="flex-1 py-2 rounded-md text-sm font-bold transition">Gasto</button>
+                        <button @click="newTx.type = 'income'" :class="newTx.type === 'income' ? 'bg-emerald-600 text-white shadow' : 'text-gray-400'" class="flex-1 py-2 rounded-md text-sm font-bold transition">Ingreso</button>
+                        <button @click="newTx.type = 'investment'" :class="newTx.type === 'investment' ? 'bg-blue-600 text-white shadow' : 'text-gray-400'" class="flex-1 py-2 rounded-md text-sm font-bold transition">Inversión</button>
+                    </div>
+                    
+                    <input type="number" x-model="newTx.amount" placeholder="Cantidad (Ej: 50)" class="w-full bg-gray-800 border border-gray-700 rounded-lg p-3 text-white focus:border-blue-500 outline-none">
+                    <input type="text" x-model="newTx.category" placeholder="Concepto (Ej: Supermercado)" class="w-full bg-gray-800 border border-gray-700 rounded-lg p-3 text-white focus:border-blue-500 outline-none">
+                    <input type="date" x-model="newTx.date" class="w-full bg-gray-800 border border-gray-700 rounded-lg p-3 text-white">
+                    
+                    <select x-model="newTx.account_id" class="w-full bg-gray-800 border border-gray-700 rounded-lg p-3 text-white">
+                        <template x-for="acc in accounts" :key="acc.id">
+                            <option :value="acc.id" x-text="acc.name"></option>
+                        </template>
+                    </select>
+
+                    <div class="flex gap-3 pt-2">
+                        <button @click="showAddModal = false" class="flex-1 py-3 text-gray-400 hover:text-white transition">Cancelar</button>
+                        <button @click="addTransaction()" class="flex-1 py-3 bg-white text-black font-bold rounded-lg hover:bg-gray-200 transition">Guardar</button>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -145,25 +169,32 @@
 
     <script>
         // ==========================================
-        // TUS CLAVES DE SUPABASE AQUÍ
+        // ⬇️ TUS CLAVES AQUÍ ⬇️
         const SUPABASE_URL = 'https://pfohhjmeomixhzktwggl.supabase.co'; 
         const SUPABASE_KEY = 'sb_publishable_t8scoBrGD4XNEozDZD3ZrA_XCl1kRaE';
         // ==========================================
 
         const { createClient } = supabase;
         const db = createClient(SUPABASE_URL, SUPABASE_KEY);
-        let chartProj = null;
+        let mainChartInstance = null;
+        let monthDonutInstance = null;
 
-        function app() {
+        function dashboard() {
             return {
-                showConfig: false,
-                isRecurring: false, // Controla el switch
-                totalBalance: 0,
                 accounts: [],
-                recurringList: [],
+                transactions: [],
+                filterAccount: 'all', // 'all' o ID de cuenta
+                showAddModal: false,
+                
+                // Estado del Drill-Down (Click en gráfica)
+                selectedMonthLabel: '',
+                selectedMonthData: null,
+
+                // KPI
+                kpi: { totalBalance: 0, totalInvested: 0, yearIncome: 0, yearExpense: 0 },
                 
                 // Formulario
-                newEntry: { category: '', amount: '', account_id: '', day: '', end_date: '' },
+                newTx: { type: 'expense', amount: '', category: '', date: new Date().toISOString().split('T')[0], account_id: '' },
 
                 async init() {
                     await this.loadData();
@@ -171,138 +202,261 @@
                 },
 
                 async loadData() {
-                    // 1. Cargas paralelas para velocidad
-                    const [accs, txs, recs] = await Promise.all([
-                        db.from('accounts').select('*').order('name'),
-                        db.from('transactions').select('*'),
-                        db.from('recurring').select('*').eq('type', 'expense').order('day_of_month') // Solo cargamos gastos fijos para la tabla
+                    // Cargar datos brutos
+                    const [accs, txs] = await Promise.all([
+                        db.from('accounts').select('*'),
+                        db.from('transactions').select('*').order('date', {ascending: true}) // Orden cronológico para gráficas
                     ]);
 
-                    const transactions = txs.data || [];
-                    this.recurringList = recs.data || [];
+                    this.accounts = accs.data || [];
+                    const allTransactions = txs.data || [];
+                    
+                    // Si hay filtro, filtramos transacciones visualmente, pero mantenemos saldo total real
+                    this.transactions = allTransactions; // Guardamos todas para cálculos globales
 
-                    // 2. Calcular Saldos (Incluyendo el Total Total)
-                    this.totalBalance = 0;
-                    this.accounts = (accs.data || []).map(a => {
-                        const sumTx = transactions
-                            .filter(t => t.account_id === a.id)
-                            .reduce((sum, t) => sum + Number(t.amount), 0);
-                        const bal = (Number(a.initial_balance) || 0) + sumTx;
-                        this.totalBalance += bal; // Sumamos al global
-                        return { ...a, current_balance: bal, tempBalance: bal };
+                    // Calcular KPIs Globales
+                    this.calculateKPIs(allTransactions);
+                    
+                    // Renderizar Gráfica Principal
+                    this.renderMainChart();
+                    
+                    // Set default account for form
+                    if(this.accounts.length) this.newTx.account_id = this.accounts[0].id;
+                },
+
+                calculateKPIs(txs) {
+                    // 1. Saldos
+                    let balance = 0;
+                    this.accounts.forEach(acc => {
+                        const accTxs = txs.filter(t => t.account_id === acc.id);
+                        const sum = accTxs.reduce((a, b) => a + Number(b.amount), 0);
+                        balance += (Number(acc.initial_balance) || 0) + sum;
+                    });
+                    this.kpi.totalBalance = balance;
+
+                    // 2. Inversiones y Flujos Anuales
+                    const currentYear = new Date().getFullYear();
+                    this.kpi.totalInvested = 0;
+                    this.kpi.yearIncome = 0;
+                    this.kpi.yearExpense = 0;
+
+                    txs.forEach(t => {
+                        const amount = Number(t.amount);
+                        const isInv = this.isInvestment(t);
+                        const year = new Date(t.date).getFullYear();
+
+                        if (isInv) this.kpi.totalInvested += Math.abs(amount);
+                        
+                        if (year === currentYear) {
+                            if (amount > 0) this.kpi.yearIncome += amount;
+                            else if (!isInv) this.kpi.yearExpense += Math.abs(amount);
+                        }
+                    });
+                },
+
+                // Lógica de Agrupación por Mes para la Gráfica
+                processMonthlyData() {
+                    const groups = {};
+                    
+                    // Filtrar por cuenta si es necesario
+                    const filteredTxs = this.filterAccount === 'all' 
+                        ? this.transactions 
+                        : this.transactions.filter(t => t.account_id === this.filterAccount);
+
+                    filteredTxs.forEach(t => {
+                        const date = new Date(t.date);
+                        const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`; // YYYY-MM
+                        
+                        if (!groups[key]) groups[key] = { income: 0, expense: 0, investment: 0, breakdown: {}, transactions: [] };
+                        
+                        groups[key].transactions.push(t); // Guardamos la tx para el detalle
+
+                        const amount = Number(t.amount);
+                        if (amount > 0) {
+                            groups[key].income += amount;
+                        } else {
+                            if (this.isInvestment(t)) {
+                                groups[key].investment += Math.abs(amount);
+                            } else {
+                                groups[key].expense += Math.abs(amount);
+                                // Desglose para el tooltip
+                                if (!groups[key].breakdown[t.category]) groups[key].breakdown[t.category] = 0;
+                                groups[key].breakdown[t.category] += Math.abs(amount);
+                            }
+                        }
                     });
 
-                    // Seleccionar cuenta por defecto
-                    if (!this.newEntry.account_id && this.accounts.length) this.newEntry.account_id = this.accounts[0].id;
-
-                    this.renderProjection();
+                    // Ordenar claves (meses)
+                    return Object.keys(groups).sort().map(key => ({
+                        month: key,
+                        label: new Date(key + '-01').toLocaleDateString('es-ES', { month: 'short', year: '2-digit' }),
+                        ...groups[key]
+                    }));
                 },
 
-                async handleSubmit() {
-                    if (!this.newEntry.amount || !this.newEntry.category) return alert("Faltan datos básicos");
+                renderMainChart() {
+                    const ctx = document.getElementById('mainChart').getContext('2d');
+                    if (mainChartInstance) mainChartInstance.destroy();
 
-                    if (this.isRecurring) {
-                        // --- GUARDAR COMO RECURRENTE ---
-                        if (!this.newEntry.day) return alert("Indica el día del mes");
-                        
-                        const { error } = await db.from('recurring').insert([{
-                            name: this.newEntry.category,
-                            amount: this.newEntry.amount,
-                            day_of_month: this.newEntry.day,
-                            end_date: this.newEntry.end_date || null, // Si está vacío envía null
-                            type: 'expense',
-                            account_id: this.newEntry.account_id
-                        }]);
-                        if (error) alert(error.message);
+                    const data = this.processMonthlyData();
+                    // Limitar a los últimos 12 meses para que no se vea minúsculo
+                    const last12 = data.slice(-12);
 
-                    } else {
-                        // --- GUARDAR COMO GASTO PUNTUAL ---
-                        const { error } = await db.from('transactions').insert([{
-                            category: this.newEntry.category,
-                            amount: -Math.abs(this.newEntry.amount), // Siempre negativo
-                            account_id: this.newEntry.account_id,
-                            date: new Date().toISOString()
-                        }]);
-                        if (error) alert(error.message);
-                    }
-
-                    // Reset y recarga
-                    this.newEntry = { category: '', amount: '', account_id: this.newEntry.account_id, day: '', end_date: '' };
-                    this.isRecurring = false;
-                    this.init();
-                },
-
-                async updateBalance(acc) {
-                    // Recalcula el saldo inicial necesario para que cuadre el final
-                    const { data: txs } = await db.from('transactions').select('amount').eq('account_id', acc.id);
-                    const sumTx = txs.reduce((sum, t) => sum + t.amount, 0);
-                    const newInitial = Number(acc.tempBalance) - sumTx;
-                    
-                    await db.from('accounts').update({ initial_balance: newInitial }).eq('id', acc.id);
-                    this.init();
-                    alert("Saldo ajustado");
-                },
-
-                async deleteRecurring(id) {
-                    if(confirm("¿Eliminar gasto fijo?")) {
-                        await db.from('recurring').delete().eq('id', id);
-                        this.init();
-                    }
-                },
-
-                // --- LÓGICA DE PROYECCIÓN (LA MAGIA) ---
-                renderProjection() {
-                    const ctx = document.getElementById('projectionChart');
-                    if (chartProj) chartProj.destroy();
-
-                    const labels = [];
-                    const dataPoints = [];
-                    const today = new Date();
-
-                    // Calculamos los próximos 6 meses
-                    for (let i = 0; i < 6; i++) {
-                        // Clonamos fecha para no machacar la original
-                        let currentMonthDate = new Date(today.getFullYear(), today.getMonth() + i, 1);
-                        
-                        // Nombre del mes (Ej: "Feb")
-                        labels.push(currentMonthDate.toLocaleDateString('es-ES', { month: 'short' }));
-
-                        // Sumar gastos activos en ese mes concreto
-                        let monthTotal = 0;
-                        this.recurringList.forEach(rec => {
-                            // Si no tiene fecha fin O la fecha fin es posterior a este mes de cálculo
-                            if (!rec.end_date || new Date(rec.end_date) >= currentMonthDate) {
-                                monthTotal += Number(rec.amount);
-                            }
-                        });
-                        dataPoints.push(monthTotal);
-                    }
-
-                    chartProj = new Chart(ctx, {
+                    mainChartInstance = new Chart(ctx, {
                         type: 'bar',
                         data: {
-                            labels: labels,
-                            datasets: [{
-                                label: 'Gastos Fijos Previstos',
-                                data: dataPoints,
-                                backgroundColor: '#a855f7', // Color Púrpura
-                                borderRadius: 4
-                            }]
+                            labels: last12.map(d => d.label),
+                            datasets: [
+                                {
+                                    label: 'Ingresos',
+                                    data: last12.map(d => d.income),
+                                    backgroundColor: '#10b981', // Verde
+                                    borderRadius: 4,
+                                    stack: 'Stack 0',
+                                },
+                                {
+                                    label: 'Inversión',
+                                    data: last12.map(d => d.investment),
+                                    backgroundColor: '#3b82f6', // Azul
+                                    borderRadius: 4,
+                                    stack: 'Stack 1',
+                                },
+                                {
+                                    label: 'Gastos',
+                                    data: last12.map(d => d.expense),
+                                    backgroundColor: '#ef4444', // Rojo
+                                    borderRadius: 4,
+                                    stack: 'Stack 1', // Apilado con inversión para ver "salidas totales"
+                                }
+                            ]
                         },
                         options: {
                             responsive: true,
                             maintainAspectRatio: false,
-                            plugins: { legend: { display: false } },
+                            interaction: { mode: 'index', intersect: false }, // Crucial para hover
+                            onClick: (e, elements) => {
+                                if (elements.length > 0) {
+                                    const index = elements[0].index;
+                                    this.openMonthDetail(last12[index]);
+                                }
+                            },
+                            plugins: {
+                                tooltip: {
+                                    callbacks: {
+                                        // AQUÍ ESTÁ LA MAGIA DEL HOVER DESGLOSADO
+                                        afterBody: (context) => {
+                                            const index = context[0].dataIndex;
+                                            const monthData = last12[index];
+                                            
+                                            // Solo mostramos desglose si estamos sobre la barra de gastos
+                                            // Buscamos si el tooltip incluye el dataset de gastos (index 2)
+                                            const hasExpense = context.find(c => c.datasetIndex === 2);
+                                            
+                                            if (hasExpense && monthData.expense > 0) {
+                                                const breakdown = monthData.breakdown;
+                                                // Ordenar por cantidad
+                                                const sorted = Object.entries(breakdown).sort((a,b) => b[1] - a[1]);
+                                                
+                                                let lines = ['--- TOP GASTOS ---'];
+                                                sorted.slice(0, 5).forEach(([cat, val]) => { // Top 5
+                                                    const pct = Math.round((val / monthData.expense) * 100);
+                                                    lines.push(`${cat}: ${pct}% (${Math.round(val)}€)`);
+                                                });
+                                                return lines;
+                                            }
+                                        }
+                                    },
+                                    backgroundColor: 'rgba(15, 23, 42, 0.9)',
+                                    borderColor: '#334155',
+                                    borderWidth: 1
+                                },
+                                legend: { labels: { color: '#94a3b8' } }
+                            },
                             scales: {
-                                y: { grid: { color: '#374151' }, ticks: { color: '#9ca3af' } },
-                                x: { grid: { display: false }, ticks: { color: '#9ca3af' } }
+                                x: { ticks: { color: '#94a3b8' }, grid: { display: false } },
+                                y: { ticks: { color: '#94a3b8' }, grid: { color: '#334155' } }
                             }
                         }
                     });
                 },
 
-                formatMoney(num) { return new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(num); },
-                formatDate(d) { return new Date(d).toLocaleDateString(); }
+                openMonthDetail(monthObj) {
+                    this.selectedMonthLabel = monthObj.label;
+                    // Ordenar transacciones del mes por fecha descendente
+                    monthObj.transactions.sort((a,b) => new Date(b.date) - new Date(a.date));
+                    this.selectedMonthData = monthObj;
+
+                    // Renderizar Donut
+                    setTimeout(() => {
+                        const ctx = document.getElementById('monthDonut');
+                        if (monthDonutInstance) monthDonutInstance.destroy();
+                        
+                        const bd = monthObj.breakdown;
+                        const labels = Object.keys(bd);
+                        const data = Object.values(bd);
+
+                        monthDonutInstance = new Chart(ctx, {
+                            type: 'doughnut',
+                            data: {
+                                labels: labels,
+                                datasets: [{
+                                    data: data,
+                                    backgroundColor: ['#f87171', '#fb923c', '#facc15', '#a3e635', '#22d3ee', '#818cf8', '#e879f9'],
+                                    borderWidth: 0
+                                }]
+                            },
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                plugins: { legend: { display: false } }
+                            }
+                        });
+                    }, 50);
+                    
+                    // Scroll suave hacia el detalle
+                    setTimeout(() => {
+                        document.getElementById('monthDonut').scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }, 100);
+                },
+
+                // --- UTILIDADES ---
+
+                async addTransaction() {
+                    if (!this.newTx.amount || !this.newTx.account_id) return alert("Faltan datos");
+                    
+                    let finalAmount = Math.abs(Number(this.newTx.amount));
+                    if (this.newTx.type !== 'income') finalAmount = -finalAmount;
+
+                    let category = this.newTx.category;
+                    if (this.newTx.type === 'investment' && !category) category = 'Inversión ETF';
+
+                    const { error } = await db.from('transactions').insert([{
+                        account_id: this.newTx.account_id,
+                        amount: finalAmount,
+                        category: category,
+                        date: this.newTx.date
+                    }]);
+
+                    if (!error) {
+                        this.showAddModal = false;
+                        this.newTx.amount = ''; this.newTx.category = '';
+                        await this.loadData(); // Recargar todo
+                    } else {
+                        alert(error.message);
+                    }
+                },
+
+                isInvestment(tx) {
+                    const cat = (tx.category || '').toLowerCase();
+                    return cat.includes('etf') || cat.includes('inversión') || cat.includes('trade republic') || cat.includes('bolsa');
+                },
+                getAccountName(id) {
+                    const acc = this.accounts.find(a => a.id === id);
+                    return acc ? acc.name : '...';
+                },
+                formatMoney(num) { 
+                    return new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(num); 
+                }
             }
         }
     </script>
